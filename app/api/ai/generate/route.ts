@@ -35,7 +35,7 @@ function checkRateLimit(adminId: string): { allowed: boolean; retryAfterMinutes?
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Executes a single batch call to Gemini with retry, backoff, and model fallback logic.
+ * Executes a single batch call to Gemini with multi-model resilience, retries, and backoff.
  */
 async function callGeminiBatch(
   gemini: ReturnType<typeof getGeminiClient>,
@@ -43,7 +43,15 @@ async function callGeminiBatch(
   prompt: string,
   batchSize: number
 ): Promise<GeneratedMCQ[]> {
-  const fallbackModel = primaryModel === "gemini-3.5-flash" ? "gemini-3.8-flash" : "gemini-3.5-flash";
+  // Ordered pool of models optimized for high throughput and reliability
+  const candidateModels = Array.from(
+    new Set([
+      primaryModel,
+      "gemini-3.5-flash-lite",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash",
+    ])
+  );
 
   const executeCall = async (model: string): Promise<GeneratedMCQ[]> => {
     const response = await gemini.models.generateContent({
@@ -83,7 +91,7 @@ async function callGeminiBatch(
     return validQuestions;
   };
 
-  const executeWithRetry = async (model: string, maxAttempts = 3): Promise<GeneratedMCQ[]> => {
+  const executeWithRetry = async (model: string, maxAttempts = 2): Promise<GeneratedMCQ[]> => {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         return await executeCall(model);
@@ -97,7 +105,7 @@ async function callGeminiBatch(
           err?.status === 503;
 
         if (isTransient && attempt < maxAttempts) {
-          const waitTime = attempt * 1500;
+          const waitTime = attempt * 1200;
           console.warn(
             `Model ${model} is experiencing a temporary spike (${err?.message}). Retrying in ${waitTime}ms (attempt ${attempt}/${maxAttempts})...`
           );
@@ -110,22 +118,19 @@ async function callGeminiBatch(
     throw new Error(`Failed after ${maxAttempts} attempts on ${model}`);
   };
 
-  // Attempt with primary model using backoff retries
-  try {
-    return await executeWithRetry(primaryModel, 3);
-  } catch (primaryErr: any) {
-    console.warn(
-      `Primary model ${primaryModel} failed after retries (${primaryErr?.message}), attempting fallback model ${fallbackModel}...`
-    );
-    // Attempt with fallback model using backoff retries
+  let lastError: any = null;
+
+  for (const model of candidateModels) {
     try {
-      await sleep(1000);
-      return await executeWithRetry(fallbackModel, 2);
-    } catch (fallbackErr: any) {
-      console.error("Both primary and fallback Gemini attempts failed:", fallbackErr?.message);
-      throw primaryErr || fallbackErr;
+      return await executeWithRetry(model, 2);
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Model ${model} temporarily unavailable (${err?.message}), attempting next model in resilience pool...`);
+      await sleep(800);
     }
   }
+
+  throw lastError || new Error("All Gemini models in candidate pool failed.");
 }
 
 export async function POST(request: Request) {
@@ -188,7 +193,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
     // 5. Partition large requests into batches of 10 questions to prevent output truncation
     const batchSizes: number[] = [];
