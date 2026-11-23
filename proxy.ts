@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
       const { data } = await supabase.auth.getUser();
       user = data?.user ?? null;
     } catch (authError) {
-      console.warn("Middleware auth retrieval notice:", authError);
+      console.warn("Proxy auth retrieval notice:", authError);
     }
 
     const pathname = request.nextUrl.pathname;
@@ -80,8 +80,8 @@ export async function middleware(request: NextRequest) {
 
     return supabaseResponse;
   } catch (error) {
-    console.error("Middleware invocation error handled safely:", error);
-    // Never crash the entire site with 500 MIDDLEWARE_INVOCATION_FAILED.
+    console.error("Proxy invocation error handled safely:", error);
+    // Never crash the entire site with 500 error.
     // Allow request to proceed to server components where errors are handled with user-friendly UI.
     return supabaseResponse;
   }
