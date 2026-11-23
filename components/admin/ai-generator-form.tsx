@@ -40,6 +40,7 @@ import {
 } from "@/app/admin/ai-generator/actions";
 import { getDefaultShowResultAction } from "@/app/admin/settings/actions";
 import type { GeneratedMCQ, EditableQuestionItem } from "@/lib/validations/ai";
+import { useAIGenerator } from "./ai-generator-context";
 
 interface PresetChip {
   label: string;
@@ -65,23 +66,35 @@ export function AIGeneratorForm() {
     : 10;
   const initialSubjectId = searchParams.get("subject") || "";
 
-  // Form State
-  const [classLevel, setClassLevel] = React.useState<number>(
-    initialClass >= 8 && initialClass <= 12 ? initialClass : 10
-  );
-  const [subjectsList, setSubjectsList] = React.useState<{ id: string; name: string }[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = React.useState<string>(initialSubjectId);
-  const [topic, setTopic] = React.useState<string>("");
-  const [language, setLanguage] = React.useState<"English" | "Hindi" | "Punjabi">("English");
-  const [count, setCount] = React.useState<number>(50);
-  const [difficulty, setDifficulty] = React.useState<string>("Moderate to Hard");
-  const [extraInstructions, setExtraInstructions] = React.useState<string>("");
+  // Persistent AI Generator Context State
+  const {
+    classLevel,
+    setClassLevel,
+    selectedSubjectId,
+    setSelectedSubjectId,
+    topic,
+    setTopic,
+    language,
+    setLanguage,
+    count,
+    setCount,
+    difficulty,
+    setDifficulty,
+    extraInstructions,
+    setExtraInstructions,
+    isGenerating,
+    generatedQuestions,
+    setGeneratedQuestions,
+    errorMessage,
+    setErrorMessage,
+    startGeneration,
+    cancelGeneration,
+    toggleQuestion,
+    selectAllQuestions,
+    updateQuestionField,
+  } = useAIGenerator();
 
-  // Generation status & results
-  const [isGenerating, setIsGenerating] = React.useState(false);
-  const [abortController, setAbortController] = React.useState<AbortController | null>(null);
-  const [generatedQuestions, setGeneratedQuestions] = React.useState<EditableQuestionItem[]>([]);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [subjectsList, setSubjectsList] = React.useState<{ id: string; name: string }[]>([]);
 
   // Add to Test Modal state
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
@@ -96,6 +109,18 @@ export function AIGeneratorForm() {
   const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number>(0);
   const [newTestShowResult, setNewTestShowResult] = React.useState<boolean>(false);
   const [isSavingTest, setIsSavingTest] = React.useState(false);
+
+  // Set initial class/subject if provided via query params and not already set
+  React.useEffect(() => {
+    if (initialClass && (!classLevel || classLevel === 10)) {
+      if (initialClass >= 8 && initialClass <= 12) {
+        setClassLevel(initialClass);
+      }
+    }
+    if (initialSubjectId && !selectedSubjectId) {
+      setSelectedSubjectId(initialSubjectId);
+    }
+  }, [initialClass, initialSubjectId]);
 
   // Load default show result setting on mount
   React.useEffect(() => {
@@ -143,7 +168,7 @@ export function AIGeneratorForm() {
     toast.info(`Preset applied: ${chip.count} questions, ${chip.difficulty}`);
   };
 
-  // Generate Questions
+  // Generate Questions via Context
   const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage(null);
@@ -158,76 +183,31 @@ export function AIGeneratorForm() {
       return;
     }
 
-    const controller = new AbortController();
-    setAbortController(controller);
-    setIsGenerating(true);
+    // Pre-fill new test title
+    setNewTestTitle(`${topic.trim()} - Class ${classLevel} Test`);
 
-    try {
-      const response = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          classLevel,
-          subject: currentSubjectName,
-          topic: topic.trim(),
-          language,
-          count,
-          difficulty,
-          extraInstructions: extraInstructions.trim() || undefined,
-        }),
-        signal: controller.signal,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate questions");
-      }
-
-      const questions: GeneratedMCQ[] = data.questions || [];
-      const editableItems: EditableQuestionItem[] = questions.map((q, idx) => ({
-        ...q,
-        id: `gen-${Date.now()}-${idx}`,
-        selected: true,
-      }));
-
-      setGeneratedQuestions(editableItems);
-      // Pre-fill new test title
-      setNewTestTitle(`${topic.trim()} - Class ${classLevel} Test`);
-      toast.success(
-        `Generated ${editableItems.length} questions for Class ${classLevel} ${currentSubjectName}.`
-      );
-    } catch (err: any) {
-      if (err.name === "AbortError") {
-        toast.info("Generation cancelled.");
-      } else {
-        const msg = err.message || "An error occurred during generation.";
-        setErrorMessage(msg);
-        toast.error(msg);
-      }
-    } finally {
-      setIsGenerating(false);
-      setAbortController(null);
-    }
+    await startGeneration({
+      classLevel,
+      subject: currentSubjectName,
+      topic: topic.trim(),
+      language,
+      count,
+      difficulty,
+      extraInstructions: extraInstructions.trim() || undefined,
+    });
   };
 
   const handleCancel = () => {
-    if (abortController) {
-      abortController.abort();
-    }
+    cancelGeneration();
   };
 
   // Question editing handlers
   const handleToggleQuestion = (id: string) => {
-    setGeneratedQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, selected: !q.selected } : q))
-    );
+    toggleQuestion(id);
   };
 
   const handleSelectAll = (select: boolean) => {
-    setGeneratedQuestions((prev) =>
-      prev.map((q) => ({ ...q, selected: select }))
-    );
+    selectAllQuestions(select);
   };
 
   const handleUpdateQuestion = (
@@ -235,9 +215,7 @@ export function AIGeneratorForm() {
     field: keyof GeneratedMCQ,
     value: string
   ) => {
-    setGeneratedQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, [field]: value } : q))
-    );
+    updateQuestionField(id, field, value);
   };
 
   // Selected count

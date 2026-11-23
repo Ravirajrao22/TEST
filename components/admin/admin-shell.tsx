@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/client";
 import type { CurrentUser } from "@/lib/supabase/server";
+import { AIGeneratorProvider, useAIGenerator } from "./ai-generator-context";
 
 interface NavItem {
   name: string;
@@ -49,9 +50,24 @@ export function AdminShell({
   children: React.ReactNode;
   user?: CurrentUser | null;
 }) {
+  return (
+    <AIGeneratorProvider>
+      <AdminShellInner user={user}>{children}</AdminShellInner>
+    </AIGeneratorProvider>
+  );
+}
+
+function AdminShellInner({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user?: CurrentUser | null;
+}) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const pathname = usePathname();
+  const { isGenerating, generatedQuestions } = useAIGenerator();
 
   // Close mobile drawer on route change
   React.useEffect(() => {
@@ -114,6 +130,8 @@ export function AdminShell({
                 ? pathname === "/admin"
                 : pathname.startsWith(item.href);
 
+            const isAIGen = item.href === "/admin/ai-generator";
+
             return (
               <Link
                 key={item.href}
@@ -132,6 +150,19 @@ export function AdminShell({
                   )}
                 />
                 <span className="truncate">{item.name}</span>
+
+                {isAIGen && isGenerating && (
+                  <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#4338CA]/10 text-[#4338CA] animate-pulse">
+                    <Sparkles className="w-2.5 h-2.5 animate-spin" />
+                    <span>Working</span>
+                  </span>
+                )}
+
+                {isAIGen && !isGenerating && generatedQuestions.length > 0 && (
+                  <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {generatedQuestions.length}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -253,6 +284,8 @@ export function AdminShell({
                     ? pathname === "/admin"
                     : pathname.startsWith(item.href);
 
+                const isAIGen = item.href === "/admin/ai-generator";
+
                 return (
                   <Link
                     key={item.href}
@@ -266,6 +299,19 @@ export function AdminShell({
                   >
                     <Icon className="w-5 h-5 stroke-[1.5]" />
                     <span>{item.name}</span>
+
+                    {isAIGen && isGenerating && (
+                      <span className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#4338CA]/10 text-[#4338CA] animate-pulse">
+                        <Sparkles className="w-2.5 h-2.5 animate-spin" />
+                        <span>Working</span>
+                      </span>
+                    )}
+
+                    {isAIGen && !isGenerating && generatedQuestions.length > 0 && (
+                      <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {generatedQuestions.length}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -297,6 +343,16 @@ export function AdminShell({
         </div>
 
         <div className="flex items-center gap-3">
+          {isGenerating && (
+            <Link
+              href="/admin/ai-generator"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-[#4338CA]/10 text-[#4338CA] border border-[#4338CA]/20 hover:bg-[#4338CA]/15 transition-all shadow-2xs animate-pulse"
+            >
+              <Sparkles className="w-3.5 h-3.5 animate-spin" />
+              <span>AI Generating questions...</span>
+            </Link>
+          )}
+
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] bg-white/50 border border-white/70">
             {user?.avatarUrl ? (
               <img
@@ -349,13 +405,18 @@ export function AdminShell({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center py-1 px-3 rounded-[10px] min-h-[44px] min-w-[56px] transition-colors",
+                "flex flex-col items-center justify-center py-1 px-3 rounded-[10px] min-h-[44px] min-w-[56px] transition-colors relative",
                 isActive
                   ? "text-[#4338CA] font-semibold"
                   : "text-slate-500 hover:text-slate-900"
               )}
             >
-              <Icon className={cn("w-5 h-5 stroke-[1.5]", isActive && "stroke-[2]")} />
+              <div className="relative">
+                <Icon className={cn("w-5 h-5 stroke-[1.5]", isActive && "stroke-[2]")} />
+                {item.href === "/admin/ai-generator" && isGenerating && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#4338CA] animate-ping" />
+                )}
+              </div>
               <span className="text-[11px] mt-0.5 tracking-tight">{item.name}</span>
             </Link>
           );

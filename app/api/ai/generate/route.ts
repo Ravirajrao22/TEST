@@ -32,8 +32,10 @@ function checkRateLimit(adminId: string): { allowed: boolean; retryAfterMinutes?
   return { allowed: true };
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
- * Executes a single batch call to Gemini with retry and model fallback logic.
+ * Executes a single batch call to Gemini with retry, backoff, and model fallback logic.
  */
 async function callGeminiBatch(
   gemini: ReturnType<typeof getGeminiClient>,
@@ -81,17 +83,47 @@ async function callGeminiBatch(
     return validQuestions;
   };
 
-  // Attempt 1 with primary model
+  const executeWithRetry = async (model: string, maxAttempts = 3): Promise<GeneratedMCQ[]> => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await executeCall(model);
+      } catch (err: any) {
+        const errMsg = err?.message?.toLowerCase() || "";
+        const isTransient =
+          errMsg.includes("503") ||
+          errMsg.includes("high demand") ||
+          errMsg.includes("unavailable") ||
+          errMsg.includes("fetch failed") ||
+          err?.status === 503;
+
+        if (isTransient && attempt < maxAttempts) {
+          const waitTime = attempt * 1500;
+          console.warn(
+            `Model ${model} is experiencing a temporary spike (${err?.message}). Retrying in ${waitTime}ms (attempt ${attempt}/${maxAttempts})...`
+          );
+          await sleep(waitTime);
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw new Error(`Failed after ${maxAttempts} attempts on ${model}`);
+  };
+
+  // Attempt with primary model using backoff retries
   try {
-    return await executeCall(primaryModel);
-  } catch (err: any) {
-    console.warn(`Primary model ${primaryModel} failed (${err?.message}), attempting fallback model ${fallbackModel}...`);
-    // Attempt 2 with fallback model
+    return await executeWithRetry(primaryModel, 3);
+  } catch (primaryErr: any) {
+    console.warn(
+      `Primary model ${primaryModel} failed after retries (${primaryErr?.message}), attempting fallback model ${fallbackModel}...`
+    );
+    // Attempt with fallback model using backoff retries
     try {
-      return await executeCall(fallbackModel);
+      await sleep(1000);
+      return await executeWithRetry(fallbackModel, 2);
     } catch (fallbackErr: any) {
       console.error("Both primary and fallback Gemini attempts failed:", fallbackErr?.message);
-      throw fallbackErr || err;
+      throw primaryErr || fallbackErr;
     }
   }
 }
