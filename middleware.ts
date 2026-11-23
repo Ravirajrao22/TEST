@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -49,15 +49,14 @@ export async function proxy(request: NextRequest) {
       const { data } = await supabase.auth.getUser();
       user = data?.user ?? null;
     } catch (authError) {
-      console.warn("Proxy auth retrieval notice:", authError);
+      console.warn("Auth retrieval notice:", authError);
     }
 
     const pathname = request.nextUrl.pathname;
 
     // 1. Unauthenticated users visiting /admin or /student must go to /login
     if (!user && (pathname.startsWith("/admin") || pathname.startsWith("/student"))) {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/login";
+      const redirectUrl = new URL("/login", request.url);
       redirectUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(redirectUrl);
     }
@@ -72,23 +71,24 @@ export async function proxy(request: NextRequest) {
 
       // Signed-in users visiting /login or / are redirected to their home dashboard
       if (pathname === "/login" || pathname === "/") {
-        const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = isAdminByEmail ? "/admin" : "/student";
+        const redirectUrl = new URL(isAdminByEmail ? "/admin" : "/student", request.url);
         return NextResponse.redirect(redirectUrl);
       }
     }
 
     return supabaseResponse;
   } catch (error) {
-    console.error("Proxy invocation error handled safely:", error);
-    // Never crash the entire site with 500 error.
-    // Allow request to proceed to server components where errors are handled with user-friendly UI.
+    console.error("Middleware invocation error handled safely:", error);
+    // Never crash the entire site with 500 error
     return supabaseResponse;
   }
 }
 
+// Backward compatibility alias for Next 16
+export const proxy = middleware;
+
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
