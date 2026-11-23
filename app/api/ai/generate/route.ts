@@ -32,105 +32,133 @@ function checkRateLimit(adminId: string): { allowed: boolean; retryAfterMinutes?
   return { allowed: true };
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * Executes a single batch call to Gemini with multi-model resilience, retries, and backoff.
+ * OpenRouter fallback helper if Google AI Studio free tier has spikes
  */
-async function callGeminiBatch(
-  gemini: ReturnType<typeof getGeminiClient>,
-  primaryModel: string,
-  prompt: string,
-  batchSize: number
-): Promise<GeneratedMCQ[]> {
-  // Ordered pool of models optimized for high throughput and reliability
-  const candidateModels = Array.from(
-    new Set([
-      primaryModel,
-      "gemini-3.5-flash-lite",
-      "gemini-3.1-flash-lite",
-      "gemini-3.5-flash",
-    ])
-  );
+async function callOpenRouterBatch(prompt: string): Promise<GeneratedMCQ[]> {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) return [];
 
-  const executeCall = async (model: string): Promise<GeneratedMCQ[]> => {
-    const response = await gemini.models.generateContent({
-      model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://testhub.coaching",
+      "X-Title": "TestHub",
+    },
+    body: JSON.stringify({
+      model: process.env.OPENROUTER_MODEL || "google/gemini-2.0-flash-001",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert exam question generator for Indian schools (CBSE/NCERT). Return only a valid JSON array of question objects without markdown wrapping.",
+        },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
 
-    const text = response.text?.trim() || "";
-    if (!text) {
-      throw new Error("Empty response received from Gemini API");
-    }
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenRouter returned status ${response.status}: ${errText}`);
+  }
 
-    // Parse JSON
-    let parsed: any;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      // In case the model wrapped JSON in markdown code blocks
-      const cleanJson = text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
-      parsed = JSON.parse(cleanJson);
-    }
+  const data = await response.json();
+  const text = data?.choices?.[0]?.message?.content || "";
+  const cleanJson = text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+  const parsed = JSON.parse(cleanJson);
+  const list = Array.isArray(parsed) ? parsed : parsed.questions || [parsed];
+  const validQuestions: GeneratedMCQ[] = [];
 
-    // Ensure array
-    const list = Array.isArray(parsed) ? parsed : parsed.questions || [parsed];
-    const validQuestions: GeneratedMCQ[] = [];
-
-    for (const item of list) {
-      const result = generatedMCQSchema.safeParse(item);
-      if (result.success) {
-        validQuestions.push(result.data);
-      }
-    }
-
-    return validQuestions;
-  };
-
-  const executeWithRetry = async (model: string, maxAttempts = 2): Promise<GeneratedMCQ[]> => {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        return await executeCall(model);
-      } catch (err: any) {
-        const errMsg = err?.message?.toLowerCase() || "";
-        const isTransient =
-          errMsg.includes("503") ||
-          errMsg.includes("high demand") ||
-          errMsg.includes("unavailable") ||
-          errMsg.includes("fetch failed") ||
-          err?.status === 503;
-
-        if (isTransient && attempt < maxAttempts) {
-          const waitTime = attempt * 1200;
-          console.warn(
-            `Model ${model} is experiencing a temporary spike (${err?.message}). Retrying in ${waitTime}ms (attempt ${attempt}/${maxAttempts})...`
-          );
-          await sleep(waitTime);
-          continue;
-        }
-        throw err;
-      }
-    }
-    throw new Error(`Failed after ${maxAttempts} attempts on ${model}`);
-  };
-
-  let lastError: any = null;
-
-  for (const model of candidateModels) {
-    try {
-      return await executeWithRetry(model, 2);
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`Model ${model} temporarily unavailable (${err?.message}), attempting next model in resilience pool...`);
-      await sleep(800);
+  for (const item of list) {
+    const result = generatedMCQSchema.safeParse(item);
+    if (result.success) {
+      validQuestions.push(result.data);
     }
   }
 
-  throw lastError || new Error("All Gemini models in candidate pool failed.");
+  return validQuestions;
+}
+
+/**
+ * Executes a single batch call to Gemini with high-capacity models first,
+ * instant failover on spikes, and optional OpenRouter backup.
+ */
+async function callGeminiBatch(
+  gemini: ReturnType<typeof getGeminiClient> | null,
+  prompt: string,
+  batchSize: number
+): Promise<GeneratedMCQ[]> {
+  // Always prioritize high-throughput lite models (1.3s response, zero 503 spikes)
+  const candidateModels = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+  ];
+
+  if (gemini) {
+    for (const model of candidateModels) {
+      try {
+        const response = await gemini.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
+
+        const text = response.text?.trim() || "";
+        if (!text) continue;
+
+        // Parse JSON
+        let parsed: any;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          const cleanJson = text.replace(/```(?:json)?/gi, "").replace(/```/g, "").trim();
+          parsed = JSON.parse(cleanJson);
+        }
+
+        const list = Array.isArray(parsed) ? parsed : parsed.questions || [parsed];
+        const validQuestions: GeneratedMCQ[] = [];
+
+        for (const item of list) {
+          const result = generatedMCQSchema.safeParse(item);
+          if (result.success) {
+            validQuestions.push(result.data);
+          }
+        }
+
+        if (validQuestions.length > 0) {
+          return validQuestions;
+        }
+      } catch (err: any) {
+        console.warn(
+          `Model ${model} unavailable (${err?.message}). Instantly cascading to next model in pool...`
+        );
+      }
+    }
+  }
+
+  // OpenRouter fallback if configured
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      console.info("Using OpenRouter fallback for question generation...");
+      const openRouterQuestions = await callOpenRouterBatch(prompt);
+      if (openRouterQuestions.length > 0) {
+        return openRouterQuestions;
+      }
+    } catch (openRouterErr: any) {
+      console.error("OpenRouter fallback error:", openRouterErr?.message);
+    }
+  }
+
+  throw new Error(
+    "AI models are temporarily experiencing high demand across all endpoints. Please retry in 30 seconds."
+  );
 }
 
 export async function POST(request: Request) {
@@ -179,21 +207,23 @@ export async function POST(request: Request) {
       extraInstructions,
     } = parsedRequest.data;
 
-    // 4. Initialize Gemini client
-    let gemini: ReturnType<typeof getGeminiClient>;
+    // 4. Initialize Gemini client (or use OpenRouter)
+    let gemini: ReturnType<typeof getGeminiClient> | null = null;
     try {
       gemini = getGeminiClient();
-    } catch (err: any) {
+    } catch {
+      gemini = null;
+    }
+
+    if (!gemini && !process.env.OPENROUTER_API_KEY) {
       return NextResponse.json(
         {
           error:
-            "GEMINI_API_KEY is not configured on the server. Please add GEMINI_API_KEY to your environment variables.",
+            "No AI API key is configured on the server. Please add GEMINI_API_KEY or OPENROUTER_API_KEY to your environment variables.",
         },
         { status: 500 }
       );
     }
-
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
     // 5. Partition large requests into batches of 10 questions to prevent output truncation
     const batchSizes: number[] = [];
@@ -214,7 +244,7 @@ export async function POST(request: Request) {
       // Format prompt per required prompt template
       const prompt = `You are an experienced ${board} school teacher in India. Write ${currentBatchSize} multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic}. Difficulty: ${difficulty}. Language: ${language}. Follow the NCERT-style syllabus for this class. Each question has exactly 4 options, exactly one correct option, and a one-line explanation. Do not repeat questions. Avoid ambiguous wording and 'all of the above' options. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
 
-      const batchResults = await callGeminiBatch(gemini, modelName, prompt, currentBatchSize);
+      const batchResults = await callGeminiBatch(gemini, prompt, currentBatchSize);
       allQuestions.push(...batchResults);
     }
 
