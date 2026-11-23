@@ -1,0 +1,61 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  React.useEffect(() => {
+    console.error("Global application error:", error);
+  }, [error]);
+
+  return (
+    <html lang="en">
+      <body className="bg-slate-50 text-slate-900 antialiased font-sans">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-[8px] p-6 sm:p-8 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-700 flex items-center justify-center mx-auto">
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                System Error
+              </h2>
+              <p className="mt-1.5 text-sm text-slate-600">
+                A critical error occurred. Please try reloading the application.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="primary" onClick={() => reset()} className="w-full sm:w-auto">
+                Reload Application
+              </Button>
+              <Link href="/" className="w-full sm:w-auto">
+                <Button variant="secondary" className="w-full">
+                  Home
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+}

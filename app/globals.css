@@ -1,0 +1,182 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #F4F7FB;
+    --background-to: #EAF0FA;
+    --surface: rgba(255, 255, 255, 0.60);
+    --border: rgba(255, 255, 255, 0.70);
+    
+    /* Text tokens */
+    --text-heading: #0F172A;
+    --text-body: #334155;
+    --text-muted: #64748B;
+    
+    /* Single Accent: Indigo */
+    --accent: #4338CA;
+    --accent-hover: #3730A3;
+    --accent-tint: #EEF2FF;
+    --accent-ring: rgba(67, 56, 202, 0.35);
+
+    /* Status tokens */
+    --status-success: #15803D;
+    --status-success-bg: #DCFCE7;
+    --status-error: #B91C1C;
+    --status-error-bg: #FEE2E2;
+    --status-warning: #B45309;
+    --status-warning-bg: #FEF3C7;
+
+    /* Chart colors */
+    --chart-indigo: #4338CA;
+    --chart-slate: #64748B;
+    --chart-teal: #0E7490;
+
+    /* Radii Family */
+    --radius-card: 16px;
+    --radius-input: 12px;
+    --radius-button: 10px;
+  }
+
+  html, body {
+    background-color: #F8FAFC;
+    color: var(--text-body);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    max-width: 100vw;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 600;
+    color: var(--text-heading);
+    letter-spacing: -0.02em;
+  }
+
+  /* Enforce 16px minimum on all form controls to prevent automatic iOS zoom */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Visible focus ring: 2px indigo with 2px offset */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #4338CA;
+  }
+}
+
+/* ==============================================================================
+   GLASS SURFACES SPECIFICATION (glass, glass-strong, glass-solid)
+   ============================================================================== */
+
+/* Standard Glass: Cards, Sidebar, Top Bar */
+.glass {
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.90), 0 8px 32px 0 rgba(31, 41, 90, 0.08);
+  border-radius: 16px;
+}
+
+/* Strong Glass: Modals, Drawers, Dropdowns, Toasts */
+.glass-strong {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), 0 12px 40px 0 rgba(31, 41, 90, 0.12);
+  border-radius: 16px;
+}
+
+/* Solid Glass: Data Tables, Exam Question Card, Long Forms */
+.glass-solid {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.90);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 1.0), 0 4px 20px 0 rgba(31, 41, 90, 0.05);
+  border-radius: 16px;
+}
+
+/* Performance optimization on mobile (< 768px): Reduce blur */
+@media (max-width: 768px) {
+  .glass {
+    backdrop-filter: blur(10px) saturate(130%);
+    -webkit-backdrop-filter: blur(10px) saturate(130%);
+  }
+  .glass-strong {
+    backdrop-filter: blur(14px) saturate(135%);
+    -webkit-backdrop-filter: blur(14px) saturate(135%);
+  }
+  .glass-solid {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* Fallback when backdrop-filter is unsupported */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .glass {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-color: #E2E8F0 !important;
+  }
+  .glass-strong {
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    border-color: #CBD5E1 !important;
+  }
+  .glass-solid {
+    background-color: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+  }
+}
+
+/* Reduced transparency preference */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-strong, .glass-solid {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(255, 255, 255, 0.98) !important;
+    border-color: #E2E8F0 !important;
+  }
+}
+
+/* Subtle entrance animation (150-200ms ease, 4px slide) */
+@keyframes glassEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: glassEnter 180ms ease-out forwards;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-enter, *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utility to ensure containers never overflow horizontally */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
