@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient, createAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, createAdminClient, hasServiceRoleKey, getCurrentUser } from "@/lib/supabase/server";
 
 export interface AdminResultRow {
   id: string;
@@ -49,7 +49,8 @@ export async function getResultsOverviewAction(): Promise<{
 }> {
   try {
     await requireAdmin();
-    const adminSupabase = createAdminClient();
+    const cookieSupabase = await createClient();
+    const adminSupabase = hasServiceRoleKey() ? createAdminClient() : cookieSupabase;
 
     // 1. Fetch subjects with class grades
     const { data: rawSubjects = [] } = await adminSupabase

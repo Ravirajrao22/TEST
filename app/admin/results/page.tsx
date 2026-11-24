@@ -7,8 +7,13 @@ import { getResultsOverviewAction } from "./actions";
 export const dynamic = "force-dynamic";
 
 export default async function AdminResultsPage() {
-  const { results = [], filterOptions = { classes: [8, 9, 10, 11, 12], subjects: [], tests: [] } } =
-    await getResultsOverviewAction();
+  const data = await getResultsOverviewAction();
+  const results = data?.results || [];
+  const filterOptions = {
+    classes: data?.filterOptions?.classes || [8, 9, 10, 11, 12],
+    subjects: data?.filterOptions?.subjects || [],
+    tests: data?.filterOptions?.tests || [],
+  };
 
   return (
     <div className="space-y-6">

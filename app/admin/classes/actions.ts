@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, createAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, createAdminClient, hasServiceRoleKey, getCurrentUser } from "@/lib/supabase/server";
 import {
   subjectInputSchema,
   type ClassCardData,
@@ -31,7 +31,7 @@ export async function getClassesOverview(): Promise<{
 
     // Fallback/auto-seed if classes table is empty
     if (!classesList || classesList.length === 0) {
-      const adminClient = createAdminClient();
+      const adminClient = hasServiceRoleKey() ? createAdminClient() : supabase;
       const seedGrades = [8, 9, 10, 11, 12];
       for (const grade of seedGrades) {
         await adminClient.from("classes").insert({ grade }).select();
@@ -114,7 +114,7 @@ export async function getClassSubjects(grade: number): Promise<{
 
     if (!classRow) {
       // Ensure class exists
-      const adminClient = createAdminClient();
+      const adminClient = hasServiceRoleKey() ? createAdminClient() : supabase;
       const { data: created } = await adminClient
         .from("classes")
         .insert({ grade })

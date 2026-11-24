@@ -47,11 +47,20 @@ export async function createClient() {
 /**
  * Creates a typed admin Supabase client with the service role key.
  * Strictly for server-side operations that bypass Row Level Security (RLS).
- * NEVER expose this or its key to the client.
+ * Falls back to anon key if service role key is not configured to avoid 401 errors.
  */
+export function hasServiceRoleKey(): boolean {
+  const k = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  return Boolean(k && k.trim() !== "" && !k.includes("placeholder"));
+}
+
 export function createAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key";
+  const serviceRoleKey = hasServiceRoleKey()
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY!.trim()
+    : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      "placeholder-anon-key";
 
   return createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {

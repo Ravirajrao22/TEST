@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, createAdminClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, createAdminClient, hasServiceRoleKey, getCurrentUser } from "@/lib/supabase/server";
 
 export interface AdminTestOverviewItem {
   id: string;
@@ -76,27 +76,31 @@ export async function getAllAdminTestsAction(): Promise<{
     const submissionCounts = new Map<string, number>();
 
     if (testIds.length > 0) {
-      const adminSupabase = createAdminClient();
+      try {
+        const countClient = hasServiceRoleKey() ? createAdminClient() : supabase;
 
-      // Aggregate question counts
-      const { data: qRows } = await adminSupabase
-        .from("questions")
-        .select("test_id")
-        .in("test_id", testIds);
+        // Aggregate question counts
+        const { data: qRows } = await countClient
+          .from("questions")
+          .select("test_id")
+          .in("test_id", testIds);
 
-      qRows?.forEach((q) => {
-        questionCounts.set(q.test_id, (questionCounts.get(q.test_id) || 0) + 1);
-      });
+        qRows?.forEach((q) => {
+          questionCounts.set(q.test_id, (questionCounts.get(q.test_id) || 0) + 1);
+        });
 
-      // Aggregate submission counts
-      const { data: aRows } = await adminSupabase
-        .from("attempts")
-        .select("test_id")
-        .in("test_id", testIds);
+        // Aggregate submission counts
+        const { data: aRows } = await countClient
+          .from("attempts")
+          .select("test_id")
+          .in("test_id", testIds);
 
-      aRows?.forEach((a) => {
-        submissionCounts.set(a.test_id, (submissionCounts.get(a.test_id) || 0) + 1);
-      });
+        aRows?.forEach((a) => {
+          submissionCounts.set(a.test_id, (submissionCounts.get(a.test_id) || 0) + 1);
+        });
+      } catch (err) {
+        console.error("Aggregation error in getAllAdminTestsAction:", err);
+      }
     }
 
     const formattedTests: AdminTestOverviewItem[] = (tests || []).map((t) => {

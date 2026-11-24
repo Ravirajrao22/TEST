@@ -39,6 +39,17 @@ export default function AdminError({
         <p className="mt-1.5 text-sm text-slate-600">
           An error occurred while loading this section of the admin dashboard.
         </p>
+        {error?.message && (
+          <div className="mt-3 p-3 rounded-[6px] bg-red-50 border border-red-200 text-left font-mono text-xs text-red-800 break-words">
+            <span className="font-semibold block text-red-900 mb-0.5">Details:</span>
+            {error.message}
+            {error.digest && (
+              <span className="block text-[10px] text-slate-500 mt-1">
+                Digest: {error.digest}
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
         <Button variant="primary" onClick={() => reset()} className="w-full sm:w-auto">

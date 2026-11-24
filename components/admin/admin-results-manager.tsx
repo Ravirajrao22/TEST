@@ -57,10 +57,11 @@ export function AdminResultsManager({
 
   // Filter subjects by selected grade
   const availableSubjects = React.useMemo(() => {
-    if (selectedGrade === "all") return filterOptions.subjects;
+    const list = filterOptions?.subjects || [];
+    if (selectedGrade === "all") return list;
     const gradeNum = parseInt(selectedGrade, 10);
-    return filterOptions.subjects.filter((s) => s.classGrade === gradeNum);
-  }, [selectedGrade, filterOptions.subjects]);
+    return list.filter((s) => s.classGrade === gradeNum);
+  }, [selectedGrade, filterOptions?.subjects]);
 
   // Reset subject filter if it no longer exists in available subjects
   React.useEffect(() => {
@@ -74,7 +75,8 @@ export function AdminResultsManager({
 
   // Filter tests by selected grade and subject
   const availableTests = React.useMemo(() => {
-    return filterOptions.tests.filter((t) => {
+    const list = filterOptions?.tests || [];
+    return list.filter((t) => {
       if (selectedGrade !== "all" && t.classGrade !== parseInt(selectedGrade, 10)) {
         return false;
       }
@@ -83,7 +85,7 @@ export function AdminResultsManager({
       }
       return true;
     });
-  }, [selectedGrade, selectedSubjectId, filterOptions.tests]);
+  }, [selectedGrade, selectedSubjectId, filterOptions?.tests]);
 
   // Reset test filter if it no longer exists
   React.useEffect(() => {
@@ -97,7 +99,8 @@ export function AdminResultsManager({
 
   // Filtered rows matching all active filters
   const filteredResults = React.useMemo(() => {
-    return initialResults.filter((r) => {
+    const list = initialResults || [];
+    return list.filter((r) => {
       if (selectedGrade !== "all" && r.classGrade !== parseInt(selectedGrade, 10)) {
         return false;
       }

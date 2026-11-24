@@ -6,38 +6,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/ui/table";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient, hasServiceRoleKey } from "@/lib/supabase/server";
 import { DashboardClassTabs } from "@/components/admin/dashboard-class-tabs";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const adminSupabase = createAdminClient();
+  const cookieSupabase = await createClient();
+  const adminSupabase = hasServiceRoleKey() ? createAdminClient() : cookieSupabase;
 
-  // 1. Fetch classes
-  const { data: classesList = [] } = await adminSupabase
-    .from("classes")
-    .select("id, grade")
-    .order("grade", { ascending: true });
+  let classesList: any[] = [];
+  let allSubjects: any[] = [];
+  let allTests: any[] = [];
+  let allAttempts: any[] = [];
+
+  try {
+    const [cRes, sRes, tRes, aRes] = await Promise.all([
+      adminSupabase.from("classes").select("id, grade").order("grade", { ascending: true }),
+      adminSupabase.from("subjects").select("id, name, class_id"),
+      adminSupabase.from("tests").select("id, title, is_published, subject_id, created_at").order("created_at", { ascending: false }),
+      adminSupabase.from("attempts").select("id, test_id, class_id, score"),
+    ]);
+
+    classesList = cRes.data || [];
+    allSubjects = sRes.data || [];
+    allTests = tRes.data || [];
+    allAttempts = aRes.data || [];
+  } catch (err) {
+    console.error("Admin dashboard data fetch error:", err);
+  }
 
   const grades = [8, 9, 10, 11, 12];
-  const classMap = new Map(classesList?.map((c) => [c.grade, c.id]));
-
-  // 2. Fetch subjects
-  const { data: allSubjects = [] } = await adminSupabase
-    .from("subjects")
-    .select("id, name, class_id");
-
-  // 3. Fetch tests
-  const { data: allTests = [] } = await adminSupabase
-    .from("tests")
-    .select("id, title, is_published, subject_id, created_at")
-    .order("created_at", { ascending: false });
-
-  // 4. Fetch attempts
-  const { data: allAttempts = [] } = await adminSupabase
-    .from("attempts")
-    .select("id, test_id, class_id, score");
+  const classMap = new Map((classesList || []).map((c) => [c.grade, c.id]));
 
   // Map subjects to class_id
   const subjectToClassId = new Map(allSubjects?.map((s) => [s.id, s.class_id]));
