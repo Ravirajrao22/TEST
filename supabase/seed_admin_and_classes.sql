@@ -3,23 +3,21 @@
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/mbeylconhvuodhaaaljs/sql
 -- ==============================================================================
 
--- 1. Fix is_admin() to prevent PostgreSQL "column reference 'id' is ambiguous" error
+-- 1. Fix is_admin() by fully qualifying public.profiles.id (resolves "id is ambiguous")
 create or replace function public.is_admin()
 returns boolean
-language plpgsql
+language sql
 security definer
 set search_path = public
 stable
 as $$
-begin
-  return exists (
-    select 1 from public.profiles p
-    where p.id = auth.uid() and p.role = 'admin'
+  select exists (
+    select 1 from public.profiles
+    where public.profiles.id = auth.uid() and public.profiles.role = 'admin'
   ) or exists (
-    select 1 from public.admin_emails ae
-    where ae.email = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
+    select 1 from public.admin_emails
+    where public.admin_emails.email = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
   );
-end;
 $$;
 
 -- 2. Grant Admin Privileges to the Coaching Center Owner
@@ -27,9 +25,9 @@ insert into public.admin_emails (email)
 values ('ravikumarraj0408@gmail.com')
 on conflict (email) do nothing;
 
-update public.profiles as pr
+update public.profiles
 set role = 'admin'
-where pr.email = 'ravikumarraj0408@gmail.com';
+where public.profiles.email = 'ravikumarraj0408@gmail.com';
 
 -- 3. Seed All Classes (Grades 8, 9, 10, 11, 12)
 insert into public.classes (grade)
@@ -43,28 +41,28 @@ on conflict (grade) do nothing;
 
 -- 4. Seed Standard Subjects for Classes 8, 9, 10
 insert into public.subjects (class_id, name)
-select c.id, s.name
-from public.classes c
+select classes.id, sub.name
+from public.classes
 cross join (values
   ('Mathematics'),
   ('Science'),
   ('English'),
   ('Social Science'),
   ('Hindi')
-) as s(name)
-where c.grade in (8, 9, 10)
+) as sub(name)
+where public.classes.grade in (8, 9, 10)
 on conflict (class_id, name) do nothing;
 
 -- 5. Seed Standard Subjects for Classes 11 and 12
 insert into public.subjects (class_id, name)
-select c.id, s.name
-from public.classes c
+select classes.id, sub.name
+from public.classes
 cross join (values
   ('Physics'),
   ('Chemistry'),
   ('Mathematics'),
   ('Biology'),
   ('English')
-) as s(name)
-where c.grade in (11, 12)
+) as sub(name)
+where public.classes.grade in (11, 12)
 on conflict (class_id, name) do nothing;
