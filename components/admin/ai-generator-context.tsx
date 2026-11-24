@@ -25,8 +25,8 @@ export interface AIGeneratorContextType {
   setTopic: (t: string) => void;
   language: "English" | "Hindi" | "Punjabi";
   setLanguage: (lang: "English" | "Hindi" | "Punjabi") => void;
-  count: number;
-  setCount: (c: number) => void;
+  count: number | "";
+  setCount: (c: number | "") => void;
   difficulty: string;
   setDifficulty: (d: string) => void;
   extraInstructions: string;
@@ -71,7 +71,7 @@ export function AIGeneratorProvider({ children }: { children: React.ReactNode })
   const [selectedSubjectId, setSelectedSubjectId] = React.useState<string>("");
   const [topic, setTopic] = React.useState<string>("");
   const [language, setLanguage] = React.useState<"English" | "Hindi" | "Punjabi">("English");
-  const [count, setCount] = React.useState<number>(50);
+  const [count, setCount] = React.useState<number | "">(10);
   const [difficulty, setDifficulty] = React.useState<string>("Moderate to Hard");
   const [extraInstructions, setExtraInstructions] = React.useState<string>("");
 
@@ -149,7 +149,7 @@ export function AIGeneratorProvider({ children }: { children: React.ReactNode })
         classLevel: params.classLevel,
         subject: params.subject,
         topic: params.topic,
-        count: params.count,
+        count: Number(params.count) || 10,
       });
 
       // Save parameters
