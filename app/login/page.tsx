@@ -57,14 +57,21 @@ function LoginForm() {
   return (
     <Card glassVariant="glass-strong" className="w-full max-w-sm sm:max-w-md p-6 sm:p-8 space-y-6 text-center border-white/80 animate-enter">
       {/* Brand Logo & Heading */}
-      <div className="space-y-2">
-        <div className="w-12 h-12 rounded-[12px] bg-[#4338CA] text-white flex items-center justify-center font-bold text-xl mx-auto shadow-[0_4px_16px_rgba(67,56,202,0.30)]">
-          TH
+      <div className="space-y-3">
+        <img
+          src="/logo.jpg"
+          alt="Ayushman Shikshan Sansthan Logo"
+          className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-white shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+        />
+        <div className="space-y-1">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-heading">
+            Ayushman Shikshan Sansthan
+          </h1>
+          <p className="text-xs sm:text-sm font-semibold text-emerald-800 tracking-wide">
+            तमसो मा ज्योतिर्गमय
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-heading">
-          TestHub
-        </h1>
-        <p className="text-sm text-slate-500 leading-normal max-w-xs mx-auto">
+        <p className="text-xs sm:text-sm text-slate-500 leading-normal max-w-xs mx-auto">
           Sign in with your Google account to access your coaching tests and dashboard.
         </p>
       </div>

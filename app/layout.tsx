@@ -3,9 +3,13 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
-  title: "TestHub - Online MCQ Examination Platform",
+  title: "Ayushman Shikshan Sansthan - Online Examination Platform",
   description:
-    "Online MCQ test platform for village coaching centre teaching classes 8 to 12.",
+    "Online examination and MCQ assessment platform for Ayushman Shikshan Sansthan (Pioneer: Chandan Guru Jee). Classes 8 to 12.",
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
 };
 
 export const viewport: Viewport = {

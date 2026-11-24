@@ -134,13 +134,15 @@ export function StudentPortalClient({ user }: StudentPortalClientProps) {
     return (
       <div className="space-y-6 max-w-md mx-auto py-2 sm:py-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-[8px] bg-[#1E3A8A] text-white flex items-center justify-center font-bold text-xl mx-auto">
-            TH
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            {isEditingProfile ? "Change Your Details" : "Welcome to TestHub"}
+          <img
+            src="/logo.jpg"
+            alt="Ayushman Shikshan Sansthan Logo"
+            className="w-16 h-16 rounded-full object-cover mx-auto border border-slate-200 shadow-xs"
+          />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            {isEditingProfile ? "Change Your Details" : "Welcome to Ayushman Sansthan"}
           </h1>
-          <p className="text-sm text-slate-600">
+          <p className="text-xs sm:text-sm text-slate-600">
             {isEditingProfile
               ? "Update your enrolled class or displayed full name."
               : "Please enter your full name and select your enrolled class to start practice tests."}

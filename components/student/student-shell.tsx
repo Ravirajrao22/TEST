@@ -44,10 +44,14 @@ export function StudentShell({
             href="/student"
             className="flex items-center gap-2.5 font-bold text-slate-900 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338CA] rounded-[8px]"
           >
-            <div className="w-8 h-8 rounded-[10px] bg-[#4338CA] text-white flex items-center justify-center text-xs font-bold shadow-[0_2px_8px_rgba(67,56,202,0.30)]">
-              TH
-            </div>
-            <span className="font-heading tracking-tight">TestHub</span>
+            <img
+              src="/logo.jpg"
+              alt="Ayushman Shikshan Sansthan Logo"
+              className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
+            />
+            <span className="font-heading tracking-tight text-sm sm:text-base font-bold text-slate-900">
+              Ayushman Sansthan
+            </span>
           </Link>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/60 border border-white/80 text-slate-600 font-medium hidden sm:inline-block">
             Student Portal

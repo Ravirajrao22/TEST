@@ -108,14 +108,16 @@ function AdminShellInner({
       <aside className="hidden lg:flex fixed top-4 left-4 bottom-4 w-[248px] z-30 flex-col glass p-4 select-none">
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-2 py-2 mb-4 border-b border-white/60">
-          <div className="w-9 h-9 rounded-[10px] bg-[#4338CA] text-white flex items-center justify-center font-bold text-sm shadow-[0_4px_12px_rgba(67,56,202,0.30)] shrink-0">
-            TH
-          </div>
-          <div className="leading-tight">
-            <span className="font-bold text-slate-900 text-base font-heading tracking-tight block">
-              TestHub
+          <img
+            src="/logo.jpg"
+            alt="Ayushman Shikshan Sansthan Logo"
+            className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
+          />
+          <div className="leading-tight min-w-0">
+            <span className="font-bold text-slate-900 text-sm font-heading tracking-tight block truncate" title="Ayushman Shikshan Sansthan">
+              Ayushman
             </span>
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">
+            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
               Admin Portal
             </span>
           </div>
@@ -221,11 +223,13 @@ function AdminShellInner({
             <Menu className="w-5 h-5 stroke-[1.5]" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-[8px] bg-[#4338CA] text-white flex items-center justify-center text-xs font-bold shadow-xs">
-              TH
-            </div>
-            <span className="font-bold text-slate-900 text-base font-heading">
-              TestHub
+            <img
+              src="/logo.jpg"
+              alt="Logo"
+              className="w-7 h-7 rounded-full object-cover border border-slate-200"
+            />
+            <span className="font-bold text-slate-900 text-sm font-heading truncate max-w-[170px]">
+              Ayushman Sansthan
             </span>
           </div>
         </div>
@@ -262,10 +266,12 @@ function AdminShellInner({
           <div className="relative w-72 max-w-[80vw] h-full glass-strong p-4 flex flex-col z-10 border-r border-white/80 shadow-[0_12px_40px_rgba(31,41,90,0.15)]">
             <div className="flex items-center justify-between pb-3 border-b border-white/60 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-[8px] bg-[#4338CA] text-white flex items-center justify-center text-xs font-bold">
-                  TH
-                </div>
-                <span className="font-bold text-slate-900 font-heading">TestHub</span>
+                <img
+                  src="/logo.jpg"
+                  alt="Logo"
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                />
+                <span className="font-bold text-slate-900 font-heading text-sm">Ayushman Sansthan</span>
               </div>
               <button
                 type="button"
