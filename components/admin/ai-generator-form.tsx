@@ -104,9 +104,9 @@ export function AIGeneratorForm() {
   >([]);
   const [selectedTestId, setSelectedTestId] = React.useState<string>("");
   const [newTestTitle, setNewTestTitle] = React.useState<string>("");
-  const [newTestDuration, setNewTestDuration] = React.useState<number | "">(30);
-  const [newTestMarks, setNewTestMarks] = React.useState<number | "">(1);
-  const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number | "">(0);
+  const [newTestDuration, setNewTestDuration] = React.useState<number | string>(30);
+  const [newTestMarks, setNewTestMarks] = React.useState<number | string>(1);
+  const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number | string>(0);
   const [newTestShowResult, setNewTestShowResult] = React.useState<boolean>(false);
   const [newTestIsPublished, setNewTestIsPublished] = React.useState<boolean>(true);
   const [isSavingTest, setIsSavingTest] = React.useState(false);
@@ -360,7 +360,9 @@ export function AIGeneratorForm() {
 
         if (res.success) {
           toast.success(
-            `Test "${res.testTitle}" created with ${res.insertedCount} questions!`
+            newTestIsPublished
+              ? `Test "${res.testTitle}" published with ${res.insertedCount} questions!`
+              : `Test "${res.testTitle}" saved as Draft (${res.insertedCount} questions). You can publish it from the Tests menu anytime!`
           );
           setIsAddModalOpen(false);
         } else {
@@ -499,27 +501,21 @@ export function AIGeneratorForm() {
               {/* Number of Questions */}
               <Input
                 label="Number of Questions (1-50)"
-                type="number"
-                min={1}
-                max={50}
-                value={count === "" ? "" : count}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="e.g. 10"
+                value={count === "" ? "" : String(count)}
                 onChange={(e) => {
-                  const val = e.target.value;
+                  const val = e.target.value.replace(/[^0-9]/g, "");
                   if (val === "") {
-                    setCount("" as any);
+                    setCount("");
                   } else {
-                    const parsed = parseInt(val, 10);
-                    setCount(isNaN(parsed) ? ("" as any) : parsed);
+                    const num = parseInt(val, 10);
+                    setCount(num > 50 ? 50 : num);
                   }
                 }}
-                onBlur={() => {
-                  if (count === "" || (typeof count === "number" && count < 1)) {
-                    setCount(1);
-                  } else if (typeof count === "number" && count > 50) {
-                    setCount(50);
-                  }
-                }}
-                helperText="Auto-batched in chunks of 10."
+                helperText="Auto-batched in chunks of 10. Type any number from 1 to 50."
               />
 
               {/* Difficulty */}
@@ -895,65 +891,36 @@ export function AIGeneratorForm() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 <Input
                   label="Duration (mins)"
-                  type="number"
-                  min={5}
-                  max={180}
-                  value={newTestDuration === "" ? "" : newTestDuration}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="30"
+                  value={newTestDuration === "" ? "" : String(newTestDuration)}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "") {
-                      setNewTestDuration("");
-                    } else {
-                      const parsed = parseInt(val, 10);
-                      setNewTestDuration(isNaN(parsed) ? "" : parsed);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (newTestDuration === "" || (typeof newTestDuration === "number" && newTestDuration < 5)) {
-                      setNewTestDuration(30);
-                    }
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setNewTestDuration(val === "" ? "" : parseInt(val, 10));
                   }}
                 />
                 <Input
                   label="Marks / Q"
-                  type="number"
-                  step="0.5"
-                  min={0.5}
-                  value={newTestMarks === "" ? "" : newTestMarks}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="1"
+                  value={newTestMarks === "" ? "" : String(newTestMarks)}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "") {
-                      setNewTestMarks("");
-                    } else {
-                      const parsed = parseFloat(val);
-                      setNewTestMarks(isNaN(parsed) ? "" : parsed);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (newTestMarks === "" || (typeof newTestMarks === "number" && newTestMarks <= 0)) {
-                      setNewTestMarks(1);
-                    }
+                    const val = e.target.value.replace(/[^0-9.]/g, "");
+                    setNewTestMarks(val === "" ? "" : parseFloat(val) || "");
                   }}
                 />
                 <Input
                   label="Neg Marks"
-                  type="number"
-                  step="0.25"
-                  min={0}
-                  value={newTestNegativeMarks === "" ? "" : newTestNegativeMarks}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={newTestNegativeMarks === "" ? "" : String(newTestNegativeMarks)}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "") {
-                      setNewTestNegativeMarks("");
-                    } else {
-                      const parsed = parseFloat(val);
-                      setNewTestNegativeMarks(isNaN(parsed) ? "" : parsed);
-                    }
-                  }}
-                  onBlur={() => {
-                    if (newTestNegativeMarks === "" || (typeof newTestNegativeMarks === "number" && newTestNegativeMarks < 0)) {
-                      setNewTestNegativeMarks(0);
-                    }
+                    const val = e.target.value.replace(/[^0-9.]/g, "");
+                    setNewTestNegativeMarks(val === "" ? "" : parseFloat(val) || "");
                   }}
                 />
               </div>

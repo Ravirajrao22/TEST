@@ -12,6 +12,7 @@ import {
   Filter,
   CheckCircle2,
   Users,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import {
   updateTestShowResultAction,
+  updateTestPublishStatusAction,
   type AdminTestOverviewItem,
 } from "@/app/admin/tests/actions";
 
@@ -34,11 +36,43 @@ export function AdminTestsManager({ initialTests }: AdminTestsManagerProps) {
   const [tests, setTests] = React.useState<AdminTestOverviewItem[]>(initialTests);
   const [selectedGrade, setSelectedGrade] = React.useState<string>("all");
   const [updatingTestId, setUpdatingTestId] = React.useState<string | null>(null);
+  const [updatingPublishTestId, setUpdatingPublishTestId] = React.useState<string | null>(null);
 
   // Sync with prop changes
   React.useEffect(() => {
     setTests(initialTests);
   }, [initialTests]);
+
+  // Handle Switch Toggle for Individual Test Publish Status
+  const handleTogglePublish = async (testId: string, currentVal: boolean) => {
+    const newVal = !currentVal;
+
+    // Optimistic UI update
+    setTests((prev) =>
+      prev.map((t) => (t.id === testId ? { ...t, isPublished: newVal } : t))
+    );
+    setUpdatingPublishTestId(testId);
+
+    try {
+      const res = await updateTestPublishStatusAction(testId, newVal);
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        // Rollback on failure
+        setTests((prev) =>
+          prev.map((t) => (t.id === testId ? { ...t, isPublished: currentVal } : t))
+        );
+        toast.error(res.message || "Failed to update publish status.");
+      }
+    } catch (err: any) {
+      setTests((prev) =>
+        prev.map((t) => (t.id === testId ? { ...t, isPublished: currentVal } : t))
+      );
+      toast.error(err?.message || "An unexpected error occurred.");
+    } finally {
+      setUpdatingPublishTestId(null);
+    }
+  };
 
   // Handle Switch Toggle for Individual Test
   const handleToggleShowResult = async (testId: string, currentVal: boolean) => {
@@ -133,6 +167,14 @@ export function AdminTestsManager({ initialTests }: AdminTestsManagerProps) {
                     {/* Left: Test Details */}
                     <div className="space-y-1.5 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={t.isPublished ? "success" : "secondary"}
+                          className={`text-xs font-semibold ${
+                            !t.isPublished ? "bg-amber-100 text-amber-800 border-amber-200" : ""
+                          }`}
+                        >
+                          {t.isPublished ? "Published" : "Draft (Unpublished)"}
+                        </Badge>
                         <Badge variant="primary" className="text-xs font-semibold">
                           Class {t.grade}
                         </Badge>
@@ -169,18 +211,56 @@ export function AdminTestsManager({ initialTests }: AdminTestsManagerProps) {
                       </div>
                     </div>
 
-                    {/* Right: Visibility Switch & Status */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0">
+                    {/* Right: Publish Switch & Visibility Switch */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 shrink-0">
+                      {/* Publish to Students Switch */}
+                      <div className={`flex items-center justify-between sm:justify-start gap-3 p-2.5 rounded-[6px] border ${
+                        t.isPublished
+                          ? "bg-green-50/70 border-green-200"
+                          : "bg-amber-50/80 border-amber-200"
+                      }`}>
+                        <div className="text-left space-y-0.5">
+                          <span className="text-xs font-semibold text-slate-900 block">
+                            {t.isPublished ? "Published" : "Draft Test"}
+                          </span>
+                          <span className="text-[11px] text-slate-500 block">
+                            {t.isPublished ? "Students can attempt" : "Hidden from students"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {!t.isPublished && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="primary"
+                              disabled={updatingPublishTestId === t.id}
+                              onClick={() => handleTogglePublish(t.id, false)}
+                              className="text-xs font-bold py-1 px-2.5 min-h-[34px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                              Publish Now
+                            </Button>
+                          )}
+                          <Switch
+                            id={`publish-${t.id}`}
+                            checked={t.isPublished}
+                            disabled={updatingPublishTestId === t.id}
+                            onCheckedChange={() => handleTogglePublish(t.id, t.isPublished)}
+                          />
+                        </div>
+                      </div>
+
                       {/* Show result to students Switch */}
                       <div className="flex items-center justify-between sm:justify-start gap-3 p-2.5 rounded-[6px] bg-slate-50 border border-slate-200">
                         <div className="text-left space-y-0.5">
                           <span className="text-xs font-semibold text-slate-900 block">
-                            Show result to students
+                            Show results
                           </span>
                           <span className="text-[11px] text-slate-500 block">
                             {t.showResult
-                              ? "Visible immediately"
-                              : "Hidden until released"}
+                              ? "Immediate"
+                              : "On release"}
                           </span>
                         </div>
 

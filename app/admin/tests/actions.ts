@@ -187,6 +187,59 @@ export async function updateTestShowResultAction(
 }
 
 /**
+ * Updates an individual test's publish status (Published vs Draft).
+ */
+export async function updateTestPublishStatusAction(
+  testId: string,
+  isPublished: boolean
+): Promise<{
+  success: boolean;
+  isPublished: boolean;
+  message: string;
+  error?: string;
+}> {
+  try {
+    await requireAdmin();
+    const supabase = await createClient();
+
+    const { error } = await supabase
+      .from("tests")
+      .update({ is_published: isPublished })
+      .eq("id", testId);
+
+    if (error) {
+      return {
+        success: false,
+        isPublished: !isPublished,
+        message: "Failed to update test publish status.",
+        error: error.message,
+      };
+    }
+
+    revalidatePath("/admin/tests");
+    revalidatePath("/admin/classes");
+    revalidatePath("/student");
+
+    const message = isPublished
+      ? "Test is now Published! Students can see and attempt this test."
+      : "Test is now saved as Draft (hidden from students).";
+
+    return {
+      success: true,
+      isPublished,
+      message,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      isPublished: !isPublished,
+      message: err?.message || "Failed to update test publish status.",
+      error: err?.message,
+    };
+  }
+}
+
+/**
  * Bulk updates show_result for all tests under a specific subject.
  */
 export async function bulkUpdateSubjectTestsShowResultAction(

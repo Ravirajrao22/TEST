@@ -10,6 +10,7 @@ import {
   Sparkles,
   Plus,
   Users,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import {
   updateTestShowResultAction,
+  updateTestPublishStatusAction,
   bulkUpdateSubjectTestsShowResultAction,
 } from "@/app/admin/tests/actions";
 
@@ -50,6 +52,7 @@ export function SubjectTestsManager({
   const { toast } = useToast();
   const [tests, setTests] = React.useState<SubjectTestRow[]>(initialTests);
   const [updatingTestId, setUpdatingTestId] = React.useState<string | null>(null);
+  const [updatingPublishId, setUpdatingPublishId] = React.useState<string | null>(null);
 
   // Bulk dialog state
   const [bulkAction, setBulkAction] = React.useState<"show" | "hide" | null>(null);
@@ -58,6 +61,36 @@ export function SubjectTestsManager({
   React.useEffect(() => {
     setTests(initialTests);
   }, [initialTests]);
+
+  // Handle Switch Toggle for Individual Test Publish Status
+  const handleTogglePublish = async (testId: string, currentVal: boolean) => {
+    const newVal = !currentVal;
+
+    // Optimistic UI update
+    setTests((prev) =>
+      prev.map((t) => (t.id === testId ? { ...t, isPublished: newVal } : t))
+    );
+    setUpdatingPublishId(testId);
+
+    try {
+      const res = await updateTestPublishStatusAction(testId, newVal);
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        setTests((prev) =>
+          prev.map((t) => (t.id === testId ? { ...t, isPublished: currentVal } : t))
+        );
+        toast.error(res.message || "Failed to update publish status.");
+      }
+    } catch (err: any) {
+      setTests((prev) =>
+        prev.map((t) => (t.id === testId ? { ...t, isPublished: currentVal } : t))
+      );
+      toast.error(err?.message || "An unexpected error occurred.");
+    } finally {
+      setUpdatingPublishId(null);
+    }
+  };
 
   // Handle Switch Toggle for Individual Test
   const handleToggleShowResult = async (testId: string, currentVal: boolean) => {
@@ -172,9 +205,11 @@ export function SubjectTestsManager({
                       <div className="flex items-center gap-2">
                         <Badge
                           variant={t.isPublished ? "success" : "secondary"}
-                          className="text-[11px]"
+                          className={`text-[11px] font-semibold ${
+                            !t.isPublished ? "bg-amber-100 text-amber-800 border-amber-200" : ""
+                          }`}
                         >
-                          {t.isPublished ? "Published" : "Draft"}
+                          {t.isPublished ? "Published" : "Draft (Unpublished)"}
                         </Badge>
                         <span className="text-xs text-slate-500 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
@@ -198,23 +233,64 @@ export function SubjectTestsManager({
                       </div>
                     </div>
 
-                    {/* Switch: Show result to students */}
-                    <div className="flex items-center justify-between sm:justify-start gap-3 p-2.5 rounded-[6px] bg-slate-50 border border-slate-200 shrink-0">
-                      <div className="text-left space-y-0.5">
-                        <span className="text-xs font-semibold text-slate-900 block">
-                          Show result to students
-                        </span>
-                        <span className="text-[11px] text-slate-500 block">
-                          {t.showResult ? "Results visible" : "Results hidden"}
-                        </span>
+                    {/* Right: Publish Switch & Show Result Switch */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
+                      {/* Switch: Publish Status (Draft vs Published) */}
+                      <div className={`flex items-center justify-between sm:justify-start gap-3 p-2.5 rounded-[6px] border ${
+                        t.isPublished
+                          ? "bg-green-50/70 border-green-200"
+                          : "bg-amber-50/80 border-amber-200"
+                      }`}>
+                        <div className="text-left space-y-0.5">
+                          <span className="text-xs font-semibold text-slate-900 block">
+                            {t.isPublished ? "Published" : "Draft"}
+                          </span>
+                          <span className="text-[11px] text-slate-500 block">
+                            {t.isPublished ? "Active for students" : "Hidden"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {!t.isPublished && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="primary"
+                              disabled={updatingPublishId === t.id}
+                              onClick={() => handleTogglePublish(t.id, false)}
+                              className="text-xs font-bold py-1 px-2.5 min-h-[34px] bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                              Publish
+                            </Button>
+                          )}
+                          <Switch
+                            id={`sub-pub-${t.id}`}
+                            checked={t.isPublished}
+                            disabled={updatingPublishId === t.id}
+                            onCheckedChange={() => handleTogglePublish(t.id, t.isPublished)}
+                          />
+                        </div>
                       </div>
 
-                      <Switch
-                        id={`sub-res-${t.id}`}
-                        checked={t.showResult}
-                        disabled={isUpdating}
-                        onCheckedChange={() => handleToggleShowResult(t.id, t.showResult)}
-                      />
+                      {/* Switch: Show result to students */}
+                      <div className="flex items-center justify-between sm:justify-start gap-3 p-2.5 rounded-[6px] bg-slate-50 border border-slate-200">
+                        <div className="text-left space-y-0.5">
+                          <span className="text-xs font-semibold text-slate-900 block">
+                            Show results
+                          </span>
+                          <span className="text-[11px] text-slate-500 block">
+                            {t.showResult ? "Immediate" : "Hidden"}
+                          </span>
+                        </div>
+
+                        <Switch
+                          id={`sub-res-${t.id}`}
+                          checked={t.showResult}
+                          disabled={isUpdating}
+                          onCheckedChange={() => handleToggleShowResult(t.id, t.showResult)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardContent>
