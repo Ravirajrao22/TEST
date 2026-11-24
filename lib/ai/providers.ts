@@ -9,6 +9,26 @@ export interface AIProviderStatus {
 }
 
 /**
+ * Helper to ensure no API call hangs indefinitely
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms / 1000}s`));
+    }, ms);
+  });
+
+  return Promise.race([
+    promise.then((res) => {
+      clearTimeout(timeoutId);
+      return res;
+    }),
+    timeoutPromise,
+  ]);
+}
+
+/**
  * Returns available AI providers based on present environment variables
  */
 export function getAvailableAIProviders(): AIProviderStatus {
@@ -168,6 +188,7 @@ async function callGroqBatch(prompt: string): Promise<GeneratedMCQ[]> {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
+        signal: AbortSignal.timeout(12000), // Max 12s timeout
         body: JSON.stringify({
           model,
           messages: [
@@ -222,6 +243,7 @@ async function callOpenRouterBatch(prompt: string): Promise<GeneratedMCQ[]> {
           "HTTP-Referer": "https://testhub.coaching",
           "X-Title": "TestHub",
         },
+        signal: AbortSignal.timeout(12000), // Max 12s timeout
         body: JSON.stringify({
           model,
           messages: [
@@ -269,6 +291,7 @@ async function callOpenAIBatch(prompt: string): Promise<GeneratedMCQ[]> {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(12000), // Max 12s timeout
       body: JSON.stringify({
         model,
         messages: [
@@ -296,7 +319,7 @@ async function callOpenAIBatch(prompt: string): Promise<GeneratedMCQ[]> {
 }
 
 /**
- * 4. Google Gemini Provider
+ * 4. Google Gemini Provider (with strict 10s timeout and fast-fail on 429 quota exhaustion)
  */
 async function callGeminiBatch(prompt: string): Promise<GeneratedMCQ[]> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -317,13 +340,16 @@ async function callGeminiBatch(prompt: string): Promise<GeneratedMCQ[]> {
 
   for (const model of candidateModels) {
     try {
-      const response = await gemini.models.generateContent({
+      const generatePromise = gemini.models.generateContent({
         model,
         contents: prompt,
         config: {
           responseMimeType: "application/json",
         },
       });
+
+      // Strict 10-second timeout so a hanging Google call never delays the server
+      const response = await withTimeout(generatePromise, 10000, `Gemini (${model})`);
 
       const text = response.text?.trim() || "";
       if (!text) continue;
@@ -333,7 +359,14 @@ async function callGeminiBatch(prompt: string): Promise<GeneratedMCQ[]> {
         return questions;
       }
     } catch (err: any) {
-      console.warn(`Gemini model ${model} unavailable (${err?.message}). Trying next candidate...`);
+      const msg = err?.message || "";
+      console.warn(`Gemini model ${model} unavailable (${msg}).`);
+
+      // Fast-fail: If account quota is exhausted, no other Gemini model will succeed
+      if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+        console.warn("Gemini account quota exhausted. Aborting remaining Gemini models immediately.");
+        break;
+      }
     }
   }
 

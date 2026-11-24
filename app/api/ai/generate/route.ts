@@ -11,6 +11,7 @@ import {
 } from "@/lib/ai/providers";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Allow up to 60s for Vercel serverless functions
 
 // In-memory rate limiting: 20 generations per hour per admin
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
     } = parsedRequest.data;
 
     // 4. Verify AI provider availability
-    const { availableProviders, primaryProvider } = getAvailableAIProviders();
+    const { availableProviders } = getAvailableAIProviders();
     if (availableProviders.length === 0) {
       return NextResponse.json(
         {
@@ -93,29 +94,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Partition large requests into batches of 10 questions to prevent output truncation
+    // 5. Partition requests into optimal batch sizes (up to 25 per batch)
+    // and execute them concurrently in parallel to prevent Vercel timeout errors
     const batchSizes: number[] = [];
     let remaining = count;
     while (remaining > 0) {
-      const currentBatch = Math.min(remaining, 10);
+      const currentBatch = Math.min(remaining, 25);
       batchSizes.push(currentBatch);
       remaining -= currentBatch;
     }
 
-    const allQuestions: GeneratedMCQ[] = [];
-    let lastProviderUsed: AIProvider | null = null;
     const extraClause = extraInstructions ? `Additional teacher instructions: ${extraInstructions}` : "";
 
-    // Run batches sequentially and accumulate results
-    for (let i = 0; i < batchSizes.length; i++) {
-      const currentBatchSize = batchSizes[i];
+    // Run batches concurrently in parallel for maximum speed (< 3s)
+    const batchPromises = batchSizes.map(async (batchSize, batchIndex) => {
+      const batchLabel = batchSizes.length > 1 ? ` (Part ${batchIndex + 1})` : "";
+      const prompt = `You are an experienced ${board} school teacher in India. Write ${batchSize} multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic}${batchLabel}. Difficulty: ${difficulty}. Language: ${language}. Follow the NCERT-style syllabus for this class. Each question has exactly 4 options, exactly one correct option, and a one-line explanation. Do not repeat questions. Avoid ambiguous wording and 'all of the above' options. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
 
-      // Format prompt per required prompt template
-      const prompt = `You are an experienced ${board} school teacher in India. Write ${currentBatchSize} multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic}. Difficulty: ${difficulty}. Language: ${language}. Follow the NCERT-style syllabus for this class. Each question has exactly 4 options, exactly one correct option, and a one-line explanation. Do not repeat questions. Avoid ambiguous wording and 'all of the above' options. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
+      return generateMCQBatchWithFallback(prompt);
+    });
 
-      const { questions: batchResults, providerUsed } = await generateMCQBatchWithFallback(prompt);
-      lastProviderUsed = providerUsed;
-      allQuestions.push(...batchResults);
+    const batchOutputs = await Promise.all(batchPromises);
+    const allQuestions: GeneratedMCQ[] = [];
+    let lastProviderUsed: AIProvider | null = null;
+
+    for (const output of batchOutputs) {
+      allQuestions.push(...output.questions);
+      lastProviderUsed = output.providerUsed;
     }
 
     // 6. Quality filtering:
@@ -168,7 +173,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "AI API quota exceeded or rate-limited. Switch to GROQ_API_KEY (free, 14,400 req/day) in .env.local to avoid quota limits.",
+            "AI API quota exceeded or rate-limited. Add GROQ_API_KEY (free, 14,400 req/day) in Vercel Environment Variables to avoid quota limits.",
         },
         { status: 429 }
       );
@@ -182,9 +187,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "AI provider is temporarily experiencing high traffic. Please retry in a few seconds or add a GROQ_API_KEY.",
+            "AI provider is temporarily experiencing high traffic. Please add GROQ_API_KEY in Vercel to bypass Google Gemini spikes.",
         },
         { status: 503 }
+      );
+    }
+
+    if (errMsg.toLowerCase().includes("timeout") || errMsg.toLowerCase().includes("timed out")) {
+      return NextResponse.json(
+        {
+          error:
+            "AI provider request timed out. Please add GROQ_API_KEY in your environment variables for instant (< 2s) generation.",
+        },
+        { status: 504 }
       );
     }
 
