@@ -42,6 +42,24 @@ export async function GET(request: Request) {
         }
       }
 
+      // Upsert profile into public.profiles so attempts and RLS foreign keys are always satisfied
+      try {
+        await supabase.from("profiles").upsert(
+          {
+            id: data.user.id,
+            email: userEmail,
+            role,
+            full_name:
+              data.user.user_metadata?.full_name ||
+              data.user.user_metadata?.name ||
+              null,
+          },
+          { onConflict: "id" }
+        );
+      } catch (profileUpsertErr) {
+        console.warn("Profile upsert notice:", profileUpsertErr);
+      }
+
       // If next param is specified and valid, respect it for admins or valid student paths
       if (next && next.startsWith("/") && !next.startsWith("//")) {
         if (next.startsWith("/admin") && role !== "admin") {

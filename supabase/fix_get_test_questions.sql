@@ -1,9 +1,28 @@
 -- ==============================================================================
--- TestHub: Fix "column reference 'id' is ambiguous" on Student Test Attempt
+-- TestHub: Complete Fix for Foreign Key attempts_student_id_fkey & Test Submission
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/mbeylconhvuodhaaaljs/sql
 -- ==============================================================================
 
--- 1. Fix get_test_questions() with #variable_conflict use_column and table alias
+-- 1. Backfill all existing users from auth.users into public.profiles
+insert into public.profiles (id, email, role, full_name, created_at)
+select
+  u.id,
+  u.email,
+  case
+    when exists (select 1 from public.admin_emails ae where ae.email = lower(trim(u.email))) then 'admin'
+    else 'student'
+  end as role,
+  coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', 'Student') as full_name,
+  now()
+from auth.users u
+on conflict (id) do update
+set email = excluded.email,
+    role = case
+      when exists (select 1 from public.admin_emails ae where ae.email = lower(trim(excluded.email))) then 'admin'
+      else profiles.role
+    end;
+
+-- 2. Fix get_test_questions() so "id" is never ambiguous
 create or replace function public.get_test_questions(p_test_id uuid)
 returns table (
   id uuid,
@@ -44,10 +63,9 @@ begin
 end;
 $$;
 
--- 2. Grant permissions so students can run this function
 grant execute on function public.get_test_questions(uuid) to authenticated, anon;
 
--- 3. Fix submit_attempt() to prevent any conflict on submission
+-- 3. Fix submit_attempt() with automatic profile creation to prevent foreign key errors
 create or replace function public.submit_attempt(
   p_test_id uuid,
   p_student_name text,
@@ -76,6 +94,19 @@ declare
 begin
   if v_student_id is null then
     raise exception 'Authentication required to submit test';
+  end if;
+
+  -- Ensure student profile exists in public.profiles to satisfy attempts_student_id_fkey
+  if not exists (select 1 from public.profiles p where p.id = v_student_id) then
+    insert into public.profiles (id, email, role, full_name, created_at)
+    values (
+      v_student_id,
+      coalesce(auth.jwt() ->> 'email', 'student@coaching.com'),
+      'student',
+      trim(p_student_name),
+      now()
+    )
+    on conflict (id) do nothing;
   end if;
 
   select t.id, t.marks_per_question, t.negative_marks, t.show_result, t.is_published

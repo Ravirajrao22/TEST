@@ -387,6 +387,29 @@ export async function submitTestAttemptAction(payload: {
     const { testId, studentName, classId, answers } = validation.data;
     const supabase = await createClient();
 
+    // Ensure profile row exists in public.profiles so foreign key attempts_student_id_fkey is satisfied
+    try {
+      const { data: profileRow } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profileRow) {
+        await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            email: user.email,
+            role: user.role || "student",
+            full_name: studentName.trim() || user.fullName || "Student",
+          },
+          { onConflict: "id" }
+        );
+      }
+    } catch (e) {
+      console.warn("Notice: Profile check before submit:", e);
+    }
+
     // Call submit_attempt RPC
     const { data, error } = await supabase.rpc("submit_attempt", {
       p_test_id: testId,
