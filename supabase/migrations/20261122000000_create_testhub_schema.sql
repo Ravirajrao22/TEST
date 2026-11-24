@@ -200,15 +200,20 @@ create trigger on_auth_user_created
 -- Helper: Check if current authenticated user has the admin role
 create or replace function public.is_admin()
 returns boolean
-language sql
+language plpgsql
 security definer
 set search_path = public
 stable
 as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
+begin
+  return exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  ) or exists (
+    select 1 from public.admin_emails ae
+    where ae.email = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
   );
+end;
 $$;
 
 -- Function: get_test_questions(test_id)

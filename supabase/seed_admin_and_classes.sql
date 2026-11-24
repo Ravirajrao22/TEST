@@ -3,16 +3,35 @@
 -- Run this in your Supabase SQL Editor: https://supabase.com/dashboard/project/mbeylconhvuodhaaaljs/sql
 -- ==============================================================================
 
--- 1. Grant Admin Privileges to the Coaching Center Owner
+-- 1. Fix is_admin() to prevent PostgreSQL "column reference 'id' is ambiguous" error
+create or replace function public.is_admin()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+begin
+  return exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  ) or exists (
+    select 1 from public.admin_emails ae
+    where ae.email = lower(trim(coalesce(auth.jwt() ->> 'email', '')))
+  );
+end;
+$$;
+
+-- 2. Grant Admin Privileges to the Coaching Center Owner
 insert into public.admin_emails (email)
 values ('ravikumarraj0408@gmail.com')
 on conflict (email) do nothing;
 
-update public.profiles
+update public.profiles as pr
 set role = 'admin'
-where email = 'ravikumarraj0408@gmail.com';
+where pr.email = 'ravikumarraj0408@gmail.com';
 
--- 2. Seed All Classes (Grades 8, 9, 10, 11, 12)
+-- 3. Seed All Classes (Grades 8, 9, 10, 11, 12)
 insert into public.classes (grade)
 values
   (8),
@@ -22,7 +41,7 @@ values
   (12)
 on conflict (grade) do nothing;
 
--- 3. Seed Standard Subjects for Classes 8, 9, 10
+-- 4. Seed Standard Subjects for Classes 8, 9, 10
 insert into public.subjects (class_id, name)
 select c.id, s.name
 from public.classes c
@@ -36,7 +55,7 @@ cross join (values
 where c.grade in (8, 9, 10)
 on conflict (class_id, name) do nothing;
 
--- 4. Seed Standard Subjects for Classes 11 and 12
+-- 5. Seed Standard Subjects for Classes 11 and 12
 insert into public.subjects (class_id, name)
 select c.id, s.name
 from public.classes c
