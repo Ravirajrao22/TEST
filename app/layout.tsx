@@ -7,8 +7,11 @@ export const metadata: Metadata = {
   description:
     "Online examination and MCQ assessment platform for Ayushman Shikshan Sansthan (Pioneer: Chandan Guru Jee). Classes 8 to 12.",
   icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: [
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.ico", sizes: "32x32" },
+    ],
+    apple: "/apple-icon.png",
   },
 };
 

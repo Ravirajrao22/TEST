@@ -140,7 +140,7 @@ export function StudentPortalClient({ user }: StudentPortalClientProps) {
             className="w-16 h-16 rounded-full object-cover mx-auto border border-slate-200 shadow-xs"
           />
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            {isEditingProfile ? "Change Your Details" : "Welcome to Ayushman Sansthan"}
+            {isEditingProfile ? "Change Your Details" : "Welcome to Ayushman Shikshan Sansthan"}
           </h1>
           <p className="text-xs sm:text-sm text-slate-600">
             {isEditingProfile

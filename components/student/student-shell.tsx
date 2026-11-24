@@ -42,15 +42,15 @@ export function StudentShell({
         <div className="flex items-center gap-3">
           <Link
             href="/student"
-            className="flex items-center gap-2.5 font-bold text-slate-900 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338CA] rounded-[8px]"
+            className="flex items-center gap-2 sm:gap-2.5 font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4338CA] rounded-[8px] min-w-0"
           >
             <img
               src="/logo.jpg"
               alt="Ayushman Shikshan Sansthan Logo"
-              className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
             />
-            <span className="font-heading tracking-tight text-sm sm:text-base font-bold text-slate-900">
-              Ayushman Sansthan
+            <span className="font-heading tracking-tight text-xs sm:text-sm md:text-base font-bold text-slate-900 truncate max-w-[190px] sm:max-w-none">
+              Ayushman Shikshan Sansthan
             </span>
           </Link>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/60 border border-white/80 text-slate-600 font-medium hidden sm:inline-block">

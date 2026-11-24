@@ -101,15 +101,15 @@ export function AdminTestsManager({ initialTests }: AdminTestsManagerProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/admin/ai-generator">
-            <Button variant="secondary" size="sm" className="min-h-[40px]">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+          <Link href="/admin/ai-generator" className="flex-1 sm:flex-initial">
+            <Button variant="secondary" size="sm" className="min-h-[40px] w-full sm:w-auto">
               <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#1E3A8A]" />
               Generate with AI
             </Button>
           </Link>
-          <Link href="/admin/classes">
-            <Button variant="primary" size="sm" className="min-h-[40px]">
+          <Link href="/admin/classes" className="flex-1 sm:flex-initial">
+            <Button variant="primary" size="sm" className="min-h-[40px] w-full sm:w-auto">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Classes & Tests
             </Button>

@@ -114,10 +114,10 @@ function AdminShellInner({
             className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
           />
           <div className="leading-tight min-w-0">
-            <span className="font-bold text-slate-900 text-sm font-heading tracking-tight block truncate" title="Ayushman Shikshan Sansthan">
-              Ayushman
+            <span className="font-bold text-slate-900 text-xs sm:text-[13px] font-heading tracking-tight block leading-snug">
+              Ayushman Shikshan Sansthan
             </span>
-            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block">
+            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider block mt-0.5">
               Admin Portal
             </span>
           </div>
@@ -222,14 +222,14 @@ function AdminShellInner({
           >
             <Menu className="w-5 h-5 stroke-[1.5]" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <img
               src="/logo.jpg"
               alt="Logo"
-              className="w-7 h-7 rounded-full object-cover border border-slate-200"
+              className="w-7 h-7 rounded-full object-cover border border-slate-200 shrink-0"
             />
-            <span className="font-bold text-slate-900 text-sm font-heading truncate max-w-[170px]">
-              Ayushman Sansthan
+            <span className="font-bold text-slate-900 text-xs sm:text-sm font-heading truncate max-w-[190px] sm:max-w-none">
+              Ayushman Shikshan Sansthan
             </span>
           </div>
         </div>
@@ -265,13 +265,15 @@ function AdminShellInner({
 
           <div className="relative w-72 max-w-[80vw] h-full glass-strong p-4 flex flex-col z-10 border-r border-white/80 shadow-[0_12px_40px_rgba(31,41,90,0.15)]">
             <div className="flex items-center justify-between pb-3 border-b border-white/60 mb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <img
                   src="/logo.jpg"
                   alt="Logo"
-                  className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
                 />
-                <span className="font-bold text-slate-900 font-heading text-sm">Ayushman Sansthan</span>
+                <span className="font-bold text-slate-900 font-heading text-xs sm:text-sm leading-tight">
+                  Ayushman Shikshan Sansthan
+                </span>
               </div>
               <button
                 type="button"
