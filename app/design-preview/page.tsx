@@ -177,10 +177,12 @@ export default function DesignPreviewPage() {
               href="/"
               className="flex items-center gap-2 font-bold text-slate-900 font-heading text-lg"
             >
-              <div className="w-8 h-8 rounded-[10px] bg-[#4338CA] text-white flex items-center justify-center text-xs font-bold shadow-[0_2px_8px_rgba(67,56,202,0.30)]">
-                TH
-              </div>
-              <span>TestHub</span>
+              <img
+                src="/logo.jpg"
+                alt="Ayushman Shikshan Sansthan Logo"
+                className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-xs shrink-0 p-0.5"
+              />
+              <span>Ayushman Shikshan Sansthan</span>
             </Link>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/60 text-[#4338CA] font-semibold">
               Glassmorphism Design System

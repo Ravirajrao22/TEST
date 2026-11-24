@@ -61,14 +61,14 @@ function LoginForm() {
         <img
           src="/logo.jpg"
           alt="Ayushman Shikshan Sansthan Logo"
-          className="w-24 h-24 rounded-full object-cover mx-auto border-2 border-white shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
+          className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-contain bg-white mx-auto p-1.5 border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
         />
         <div className="space-y-1">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-heading">
             Ayushman Shikshan Sansthan
           </h1>
           <p className="text-xs sm:text-sm font-semibold text-emerald-800 tracking-wide">
-            तमसो मा ज्योतिर्गमय
+            &apos;तमसो मा ज्योतिर्गमय&apos; • Pioneer: Chandan Guru Jee
           </p>
         </div>
         <p className="text-xs sm:text-sm text-slate-500 leading-normal max-w-xs mx-auto">

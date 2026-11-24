@@ -137,7 +137,7 @@ export function StudentPortalClient({ user }: StudentPortalClientProps) {
           <img
             src="/logo.jpg"
             alt="Ayushman Shikshan Sansthan Logo"
-            className="w-16 h-16 rounded-full object-cover mx-auto border border-slate-200 shadow-xs"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-contain bg-white mx-auto p-1 border border-slate-200 shadow-xs"
           />
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             {isEditingProfile ? "Change Your Details" : "Welcome to Ayushman Shikshan Sansthan"}

@@ -225,8 +225,8 @@ function AdminShellInner({
           <div className="flex items-center gap-2 min-w-0">
             <img
               src="/logo.jpg"
-              alt="Logo"
-              className="w-7 h-7 rounded-full object-cover border border-slate-200 shrink-0"
+              alt="Ayushman Shikshan Sansthan Logo"
+              className="w-7 h-7 rounded-md object-contain bg-white border border-slate-200 shrink-0 p-0.5"
             />
             <span className="font-bold text-slate-900 text-xs sm:text-sm font-heading truncate max-w-[190px] sm:max-w-none">
               Ayushman Shikshan Sansthan
@@ -268,8 +268,8 @@ function AdminShellInner({
               <div className="flex items-center gap-2 min-w-0">
                 <img
                   src="/logo.jpg"
-                  alt="Logo"
-                  className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0"
+                  alt="Ayushman Shikshan Sansthan Logo"
+                  className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shrink-0 p-0.5"
                 />
                 <span className="font-bold text-slate-900 font-heading text-xs sm:text-sm leading-tight">
                   Ayushman Shikshan Sansthan

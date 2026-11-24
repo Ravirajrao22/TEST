@@ -900,7 +900,7 @@ export function StudentExamInterface({
       {/* -------------------------------------------------------------------- */}
       {/* PHONE STICKY BOTTOM BAR (<640px)                                    */}
       {/* -------------------------------------------------------------------- */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2.5 px-4 z-40 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2.5 px-4 z-40 flex items-center justify-between gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
         {/* Previous Button */}
         <Button
           type="button"

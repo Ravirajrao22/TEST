@@ -47,9 +47,9 @@ export function StudentShell({
             <img
               src="/logo.jpg"
               alt="Ayushman Shikshan Sansthan Logo"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border border-slate-200 shadow-xs shrink-0"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-contain bg-white border border-slate-200 shadow-xs shrink-0 p-0.5"
             />
-            <span className="font-heading tracking-tight text-xs sm:text-sm md:text-base font-bold text-slate-900 truncate max-w-[190px] sm:max-w-none">
+            <span className="font-heading tracking-tight text-xs sm:text-sm md:text-base font-bold text-slate-900 truncate max-w-[150px] sm:max-w-none">
               Ayushman Shikshan Sansthan
             </span>
           </Link>
@@ -100,7 +100,7 @@ export function StudentShell({
             className="text-xs font-medium text-slate-600 hover:text-[#B91C1C] hover:bg-red-50/60 min-h-[44px] px-2.5"
             onClick={handleSignOut}
             isLoading={isSigningOut}
-            title="Sign out of TestHub"
+            title="Sign out of Ayushman Shikshan Sansthan"
           >
             <LogOut className="w-4 h-4 mr-1 sm:mr-1.5 stroke-[1.5]" />
             <span className="hidden sm:inline">Sign Out</span>

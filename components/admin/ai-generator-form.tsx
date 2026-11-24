@@ -104,9 +104,9 @@ export function AIGeneratorForm() {
   >([]);
   const [selectedTestId, setSelectedTestId] = React.useState<string>("");
   const [newTestTitle, setNewTestTitle] = React.useState<string>("");
-  const [newTestDuration, setNewTestDuration] = React.useState<number>(30);
-  const [newTestMarks, setNewTestMarks] = React.useState<number>(1);
-  const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number>(0);
+  const [newTestDuration, setNewTestDuration] = React.useState<number | "">(30);
+  const [newTestMarks, setNewTestMarks] = React.useState<number | "">(1);
+  const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number | "">(0);
   const [newTestShowResult, setNewTestShowResult] = React.useState<boolean>(false);
   const [newTestIsPublished, setNewTestIsPublished] = React.useState<boolean>(true);
   const [isSavingTest, setIsSavingTest] = React.useState(false);
@@ -184,6 +184,12 @@ export function AIGeneratorForm() {
       return;
     }
 
+    const finalCount = typeof count === "number" ? count : parseInt(String(count), 10);
+    if (!finalCount || isNaN(finalCount) || finalCount < 1 || finalCount > 50) {
+      setErrorMessage("Please enter a valid number of questions between 1 and 50.");
+      return;
+    }
+
     // Pre-fill new test title
     setNewTestTitle(`${topic.trim()} - Class ${classLevel} Test`);
 
@@ -193,7 +199,7 @@ export function AIGeneratorForm() {
       subjectId: selectedSubjectId,
       topic: topic.trim(),
       language,
-      count,
+      count: finalCount,
       difficulty,
       extraInstructions: extraInstructions.trim() || undefined,
     });
@@ -344,9 +350,9 @@ export function AIGeneratorForm() {
         const res = await createTestWithQuestionsAction({
           subjectId: selectedSubjectId,
           title: newTestTitle.trim(),
-          durationMinutes: newTestDuration,
-          marksPerQuestion: newTestMarks,
-          negativeMarks: newTestNegativeMarks,
+          durationMinutes: Number(newTestDuration) || 30,
+          marksPerQuestion: Number(newTestMarks) || 1,
+          negativeMarks: Number(newTestNegativeMarks) || 0,
           showResult: newTestShowResult,
           isPublished: newTestIsPublished,
           questions: selected.map(({ id, selected: _, ...rest }) => rest),
@@ -496,8 +502,23 @@ export function AIGeneratorForm() {
                 type="number"
                 min={1}
                 max={50}
-                value={count}
-                onChange={(e) => setCount(parseInt(e.target.value, 10) || 1)}
+                value={count === "" ? "" : count}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "") {
+                    setCount("" as any);
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setCount(isNaN(parsed) ? ("" as any) : parsed);
+                  }
+                }}
+                onBlur={() => {
+                  if (count === "" || (typeof count === "number" && count < 1)) {
+                    setCount(1);
+                  } else if (typeof count === "number" && count > 50) {
+                    setCount(50);
+                  }
+                }}
                 helperText="Auto-batched in chunks of 10."
               />
 
@@ -877,30 +898,63 @@ export function AIGeneratorForm() {
                   type="number"
                   min={5}
                   max={180}
-                  value={newTestDuration}
-                  onChange={(e) =>
-                    setNewTestDuration(parseInt(e.target.value, 10) || 30)
-                  }
+                  value={newTestDuration === "" ? "" : newTestDuration}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setNewTestDuration("");
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      setNewTestDuration(isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTestDuration === "" || (typeof newTestDuration === "number" && newTestDuration < 5)) {
+                      setNewTestDuration(30);
+                    }
+                  }}
                 />
                 <Input
                   label="Marks / Q"
                   type="number"
                   step="0.5"
                   min={0.5}
-                  value={newTestMarks}
-                  onChange={(e) =>
-                    setNewTestMarks(parseFloat(e.target.value) || 1)
-                  }
+                  value={newTestMarks === "" ? "" : newTestMarks}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setNewTestMarks("");
+                    } else {
+                      const parsed = parseFloat(val);
+                      setNewTestMarks(isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTestMarks === "" || (typeof newTestMarks === "number" && newTestMarks <= 0)) {
+                      setNewTestMarks(1);
+                    }
+                  }}
                 />
                 <Input
                   label="Neg Marks"
                   type="number"
                   step="0.25"
                   min={0}
-                  value={newTestNegativeMarks}
-                  onChange={(e) =>
-                    setNewTestNegativeMarks(parseFloat(e.target.value) || 0)
-                  }
+                  value={newTestNegativeMarks === "" ? "" : newTestNegativeMarks}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setNewTestNegativeMarks("");
+                    } else {
+                      const parsed = parseFloat(val);
+                      setNewTestNegativeMarks(isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTestNegativeMarks === "" || (typeof newTestNegativeMarks === "number" && newTestNegativeMarks < 0)) {
+                      setNewTestNegativeMarks(0);
+                    }
+                  }}
                 />
               </div>
 

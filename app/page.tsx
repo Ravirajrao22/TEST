@@ -8,23 +8,30 @@ export default function HomePage() {
     <main className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-sm sm:max-w-md space-y-6 text-center animate-enter">
         {/* Brand Logo & Heading */}
-        <div className="space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-[12px] bg-[#4338CA] text-white font-bold text-xl shadow-[0_4px_16px_rgba(67,56,202,0.30)]">
-            TH
+        <div className="space-y-3">
+          <img
+            src="/logo.jpg"
+            alt="Ayushman Shikshan Sansthan Logo"
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-contain bg-white mx-auto p-1.5 border border-slate-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
+          />
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 font-heading">
+              Ayushman Shikshan Sansthan
+            </h1>
+            <p className="text-xs sm:text-sm font-semibold text-emerald-800 tracking-wide">
+              &apos;तमसो मा ज्योतिर्गमय&apos; • Pioneer: Chandan Guru Jee
+            </p>
+            <p className="text-xs sm:text-base text-slate-500 max-w-xs mx-auto">
+              Online Examination & Assessment Portal (Classes 8 to 12)
+            </p>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 font-heading">
-            TestHub
-          </h1>
-          <p className="text-sm sm:text-base text-slate-500 max-w-xs mx-auto">
-            Online MCQ Test Platform for Coaching Centre (Classes 8 to 12)
-          </p>
         </div>
 
         {/* Glass Card */}
         <Card glassVariant="glass-strong" className="p-6 sm:p-8 space-y-5 text-center border-white/80">
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-slate-900 font-heading">
-              Welcome to TestHub
+              Welcome to Ayushman Shikshan Sansthan
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
               Sign in with your Google account to access your coaching tests and results.
