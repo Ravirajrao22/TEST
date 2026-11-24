@@ -189,6 +189,7 @@ export function AIGeneratorForm() {
     await startGeneration({
       classLevel,
       subject: currentSubjectName,
+      subjectId: selectedSubjectId,
       topic: topic.trim(),
       language,
       count,
@@ -269,9 +270,21 @@ export function AIGeneratorForm() {
       return;
     }
 
+    // Default subject if not set
+    let currentSubId = selectedSubjectId;
+    if (!currentSubId && subjectsList.length > 0) {
+      currentSubId = subjectsList[0].id;
+      setSelectedSubjectId(currentSubId);
+    }
+
+    // Default title if empty
+    if (!newTestTitle.trim()) {
+      setNewTestTitle(`${topic ? topic.trim() : "MCQ Assessment"} - Class ${classLevel}`);
+    }
+
     // Fetch existing tests for this subject
-    if (selectedSubjectId) {
-      const res = await getExistingTestsForSubjectAction(selectedSubjectId);
+    if (currentSubId) {
+      const res = await getExistingTestsForSubjectAction(currentSubId);
       if (res.success && res.tests.length > 0) {
         setExistingTests(res.tests);
         setSelectedTestId(res.tests[0].id);
@@ -315,6 +328,12 @@ export function AIGeneratorForm() {
         }
       } else {
         // Create new test
+        if (!selectedSubjectId) {
+          toast.error("Please select a subject for the test.");
+          setIsSavingTest(false);
+          return;
+        }
+
         if (!newTestTitle.trim()) {
           toast.error("Please enter a test title.");
           setIsSavingTest(false);
@@ -822,6 +841,26 @@ export function AIGeneratorForm() {
             </div>
           ) : (
             <div className="space-y-3 pt-1">
+              <Select
+                label="Subject *"
+                value={selectedSubjectId}
+                onChange={(e) => {
+                  setSelectedSubjectId(e.target.value);
+                  if (e.target.value) {
+                    getExistingTestsForSubjectAction(e.target.value).then((res) => {
+                      if (res.success) {
+                        setExistingTests(res.tests);
+                      }
+                    });
+                  }
+                }}
+                options={subjectsList.map((s) => ({
+                  value: s.id,
+                  label: s.name,
+                }))}
+                required
+              />
+
               <Input
                 label="Test Title *"
                 value={newTestTitle}

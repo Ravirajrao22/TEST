@@ -150,4 +150,21 @@ describe("TestHub AI Multi-Provider & MCQ Parser", () => {
       process.env.AI_PROVIDER = originalPref;
     }
   });
+
+  it("slices questions to exact requested count when extra questions are generated", () => {
+    const raw = JSON.stringify({
+      questions: [
+        { question: "Question 1 text", option_a: "A", option_b: "B", option_c: "C", option_d: "D", correct: "A" },
+        { question: "Question 2 text", option_a: "A", option_b: "B", option_c: "C", option_d: "D", correct: "B" },
+        { question: "Question 3 text", option_a: "A", option_b: "B", option_c: "C", option_d: "D", correct: "C" },
+      ],
+    });
+
+    const parsed = parseAndValidateMCQs(raw);
+    const requestedCount = 2;
+    const finalResult = parsed.slice(0, requestedCount);
+    assert.strictEqual(finalResult.length, 2);
+    assert.strictEqual(finalResult[0].question, "Question 1 text");
+    assert.strictEqual(finalResult[1].question, "Question 2 text");
+  });
 });

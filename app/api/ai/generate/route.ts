@@ -107,9 +107,11 @@ export async function POST(request: Request) {
     const extraClause = extraInstructions ? `Additional teacher instructions: ${extraInstructions}` : "";
 
     // Run batches concurrently in parallel for maximum speed (< 3s)
+    // Request a slight buffer (+2 questions per batch) so deduplication never leaves fewer than requested
     const batchPromises = batchSizes.map(async (batchSize, batchIndex) => {
       const batchLabel = batchSizes.length > 1 ? ` (Part ${batchIndex + 1})` : "";
-      const prompt = `You are an experienced ${board} school teacher in India. Write ${batchSize} multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic}${batchLabel}. Difficulty: ${difficulty}. Language: ${language}. Follow the NCERT-style syllabus for this class. Each question has exactly 4 options, exactly one correct option, and a one-line explanation. Do not repeat questions. Avoid ambiguous wording and 'all of the above' options. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
+      const requestedWithBuffer = batchSize <= 10 ? batchSize + 2 : Math.min(batchSize + 3, 30);
+      const prompt = `You are an experienced ${board} school teacher in India. Write at least ${requestedWithBuffer} high-quality, syllabus-aligned multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic}${batchLabel}. Difficulty: ${difficulty}. Language: ${language}. Follow the NCERT-style syllabus for this class. Each question has exactly 4 options, exactly one correct option, and a one-line explanation. Do not repeat questions. Avoid ambiguous wording and 'all of the above' options. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
 
       return generateMCQBatchWithFallback(prompt);
     });
@@ -145,6 +147,34 @@ export async function POST(request: Request) {
       }
     }
 
+    // 7. Guaranteed Count: If deduplication resulted in fewer than requested,
+    // execute a fast supplementary round to refill the deficit to reach the exact count
+    if (cleanedQuestions.length < count) {
+      const deficit = count - cleanedQuestions.length;
+      try {
+        const refillPrompt = `You are an experienced ${board} school teacher in India. Write at least ${deficit + 2} unique, fresh multiple choice questions for Class ${classLevel}, Subject ${subject}, Topic ${topic} (Supplementary Set). Difficulty: ${difficulty}. Language: ${language}. Follow NCERT syllabus. Return only a JSON array of objects with keys: question, option_a, option_b, option_c, option_d, correct (A, B, C or D), explanation. ${extraClause}`;
+        const { questions: extraQuestions, providerUsed } = await generateMCQBatchWithFallback(refillPrompt);
+        lastProviderUsed = providerUsed;
+
+        for (const q of extraQuestions) {
+          const normalizedKey = q.question.toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+          if (
+            !seenQuestions.has(normalizedKey) &&
+            ["A", "B", "C", "D"].includes(q.correct) &&
+            q.option_a.trim() &&
+            q.option_b.trim() &&
+            q.option_c.trim() &&
+            q.option_d.trim()
+          ) {
+            seenQuestions.add(normalizedKey);
+            cleanedQuestions.push(q);
+          }
+        }
+      } catch (refillErr) {
+        console.warn("Supplementary question refill warning:", refillErr);
+      }
+    }
+
     if (cleanedQuestions.length === 0) {
       return NextResponse.json(
         {
@@ -155,11 +185,16 @@ export async function POST(request: Request) {
       );
     }
 
+    // Exact slice to match the requested count
+    const finalQuestions = cleanedQuestions.length >= count
+      ? cleanedQuestions.slice(0, count)
+      : cleanedQuestions;
+
     return NextResponse.json({
       success: true,
-      questions: cleanedQuestions,
+      questions: finalQuestions,
       requestedCount: count,
-      generatedCount: cleanedQuestions.length,
+      generatedCount: finalQuestions.length,
       classLevel,
       subject,
       topic,

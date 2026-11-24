@@ -7,6 +7,7 @@ import type { GeneratedMCQ, EditableQuestionItem } from "@/lib/validations/ai";
 export interface AIGenerationParams {
   classLevel: number;
   subject: string;
+  subjectId?: string;
   topic: string;
   language: "English" | "Hindi" | "Punjabi";
   count: number;
@@ -101,6 +102,7 @@ export function AIGeneratorProvider({ children }: { children: React.ReactNode })
       if (savedParams) {
         const p = JSON.parse(savedParams);
         if (p.classLevel) setClassLevel(p.classLevel);
+        if (p.selectedSubjectId) setSelectedSubjectId(p.selectedSubjectId);
         if (p.topic) setTopic(p.topic);
         if (p.count) setCount(p.count);
         if (p.difficulty) setDifficulty(p.difficulty);
@@ -156,6 +158,7 @@ export function AIGeneratorProvider({ children }: { children: React.ReactNode })
           PARAMS_STORAGE_KEY,
           JSON.stringify({
             classLevel: params.classLevel,
+            selectedSubjectId: params.subjectId || selectedSubjectId,
             topic: params.topic,
             count: params.count,
             difficulty: params.difficulty,

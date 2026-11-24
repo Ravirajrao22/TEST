@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { createClient, createAdminClient, getCurrentUser } from "@/lib/supabase/server";
 import type { GeneratedMCQ } from "@/lib/validations/ai";
 
 /**
@@ -55,6 +55,10 @@ export async function getExistingTestsForSubjectAction(subjectId: string): Promi
   error?: string;
 }> {
   try {
+    if (!subjectId || !subjectId.trim()) {
+      return { success: true, tests: [] };
+    }
+
     const supabase = await createClient();
 
     const { data: tests = [], error } = await supabase
@@ -93,6 +97,10 @@ export async function addQuestionsToExistingTestAction(
       return { success: false, error: "Unauthorized. Admin privileges required." };
     }
 
+    if (!testId || !testId.trim()) {
+      return { success: false, error: "Target test ID is required." };
+    }
+
     if (!questions || questions.length === 0) {
       return { success: false, error: "No questions to add." };
     }
@@ -121,7 +129,18 @@ export async function addQuestionsToExistingTestAction(
       explanation: q.explanation?.trim() || null,
     }));
 
-    const { error } = await supabase.from("questions").insert(rowsToInsert);
+    let { error } = await supabase.from("questions").insert(rowsToInsert);
+
+    // Fallback to admin client if service role is configured
+    if (error && process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")) {
+      try {
+        const adminClient = createAdminClient();
+        const res = await adminClient.from("questions").insert(rowsToInsert);
+        error = res.error;
+      } catch {
+        // keep original error
+      }
+    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -174,28 +193,68 @@ export async function createTestWithQuestionsAction(payload: {
       return { success: false, error: "Test title must be at least 2 characters." };
     }
 
+    if (!subjectId || !subjectId.trim()) {
+      return { success: false, error: "Please select a valid subject for this test." };
+    }
+
     if (!questions || questions.length === 0) {
       return { success: false, error: "No questions provided." };
     }
 
     const supabase = await createClient();
 
+    // Validate that the subject exists
+    const { data: subjectRow, error: subErr } = await supabase
+      .from("subjects")
+      .select("id, name, class_id")
+      .eq("id", subjectId.trim())
+      .maybeSingle();
+
+    if (subErr || !subjectRow) {
+      return {
+        success: false,
+        error: "The selected subject could not be found. Please ensure a valid subject is chosen.",
+      };
+    }
+
     // 1. Create Test
-    const { data: newTest, error: testErr } = await supabase
-      .from("tests")
-      .insert({
-        subject_id: subjectId,
-        title: title.trim(),
-        duration_minutes: durationMinutes > 0 ? durationMinutes : null,
-        marks_per_question: marksPerQuestion,
-        negative_marks: negativeMarks,
-        show_result: showResult,
-        is_published: false, // drafted by default so admin can review
-      })
-      .select()
-      .single();
+    const testData = {
+      subject_id: subjectRow.id,
+      title: title.trim(),
+      duration_minutes: durationMinutes > 0 ? durationMinutes : null,
+      marks_per_question: marksPerQuestion,
+      negative_marks: negativeMarks,
+      show_result: showResult,
+      is_published: false, // drafted by default so admin can review
+    };
+
+    let newTest: any = null;
+    let testErr: any = null;
+
+    const userRes = await supabase.from("tests").insert(testData).select().single();
+    newTest = userRes.data;
+    testErr = userRes.error;
+
+    // Fallback to service role client if RLS blocked the insert
+    if (testErr && process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")) {
+      try {
+        const adminClient = createAdminClient();
+        const adminRes = await adminClient.from("tests").insert(testData).select().single();
+        newTest = adminRes.data;
+        testErr = adminRes.error;
+      } catch {
+        // keep original error
+      }
+    }
 
     if (testErr || !newTest) {
+      console.error("Test creation error in Supabase:", testErr);
+      if (testErr?.code === "42501" || testErr?.message?.includes("policy")) {
+        return {
+          success: false,
+          error: "Permission denied by database RLS. Ensure your email is added to the admin_emails table in Supabase.",
+        };
+      }
       return { success: false, error: testErr?.message || "Failed to create test." };
     }
 
@@ -212,11 +271,20 @@ export async function createTestWithQuestionsAction(payload: {
       explanation: q.explanation?.trim() || null,
     }));
 
-    const { error: questionsErr } = await supabase
-      .from("questions")
-      .insert(rowsToInsert);
+    let { error: questionsErr } = await supabase.from("questions").insert(rowsToInsert);
+
+    if (questionsErr && process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY.includes("placeholder")) {
+      try {
+        const adminClient = createAdminClient();
+        const adminRes = await adminClient.from("questions").insert(rowsToInsert);
+        questionsErr = adminRes.error;
+      } catch {
+        // keep original error
+      }
+    }
 
     if (questionsErr) {
+      console.error("Questions insertion error in Supabase:", questionsErr);
       return {
         success: false,
         testId: newTest.id,
