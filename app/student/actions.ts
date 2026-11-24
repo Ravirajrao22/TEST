@@ -309,8 +309,21 @@ export async function getTestForExamAction(testId: string): Promise<{
       p_test_id: testId,
     });
 
-    if (qErr) {
-      return { success: false, error: qErr.message || "Failed to load questions." };
+    let examQuestions = questions;
+
+    // Fallback: If RPC has an ambiguous column error or fails, query safe fields directly
+    if (qErr || !examQuestions || examQuestions.length === 0) {
+      const { data: directQuestions } = await supabase
+        .from("questions")
+        .select("id, test_id, position, question_text, option_a, option_b, option_c, option_d")
+        .eq("test_id", testId)
+        .order("position", { ascending: true });
+
+      if (directQuestions && directQuestions.length > 0) {
+        examQuestions = directQuestions;
+      } else if (qErr) {
+        return { success: false, error: qErr.message || "Failed to load questions." };
+      }
     }
 
     const rawSubjects: any = test.subjects;

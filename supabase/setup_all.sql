@@ -138,6 +138,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   v_role text := 'student';
 begin
@@ -202,10 +203,11 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 begin
   if not exists (
-    select 1 from public.tests
-    where id = p_test_id and (is_published = true or public.is_admin())
+    select 1 from public.tests as t
+    where t.id = p_test_id and (t.is_published = true or public.is_admin())
   ) then
     raise exception 'Test is not available or not published';
   end if;
@@ -220,7 +222,7 @@ begin
     q.option_b,
     q.option_c,
     q.option_d
-  from public.questions q
+  from public.questions as q
   where q.test_id = p_test_id
   order by q."position" asc;
 end;
@@ -238,6 +240,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   v_student_id uuid := auth.uid();
   v_test record;
@@ -256,10 +259,10 @@ begin
     raise exception 'Authentication required to submit test';
   end if;
 
-  select id, marks_per_question, negative_marks, show_result, is_published
+  select t.id, t.marks_per_question, t.negative_marks, t.show_result, t.is_published
   into v_test
-  from public.tests
-  where id = p_test_id;
+  from public.tests t
+  where t.id = p_test_id;
 
   if v_test.id is null then
     raise exception 'Test not found';
@@ -269,13 +272,13 @@ begin
     raise exception 'Test is not published and cannot be submitted';
   end if;
 
-  if not exists (select 1 from public.classes where id = p_class_id) then
+  if not exists (select 1 from public.classes c where c.id = p_class_id) then
     raise exception 'Invalid class level';
   end if;
 
   if exists (
-    select 1 from public.attempts
-    where test_id = p_test_id and student_id = v_student_id
+    select 1 from public.attempts a
+    where a.test_id = p_test_id and a.student_id = v_student_id
   ) then
     raise exception 'You have already submitted an attempt for this test';
   end if;
@@ -384,6 +387,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+#variable_conflict use_column
 declare
   v_student_id uuid := auth.uid();
   v_attempt record;
