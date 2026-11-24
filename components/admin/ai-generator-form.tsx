@@ -108,6 +108,7 @@ export function AIGeneratorForm() {
   const [newTestMarks, setNewTestMarks] = React.useState<number>(1);
   const [newTestNegativeMarks, setNewTestNegativeMarks] = React.useState<number>(0);
   const [newTestShowResult, setNewTestShowResult] = React.useState<boolean>(false);
+  const [newTestIsPublished, setNewTestIsPublished] = React.useState<boolean>(true);
   const [isSavingTest, setIsSavingTest] = React.useState(false);
 
   // Set initial class/subject if provided via query params and not already set
@@ -347,6 +348,7 @@ export function AIGeneratorForm() {
           marksPerQuestion: newTestMarks,
           negativeMarks: newTestNegativeMarks,
           showResult: newTestShowResult,
+          isPublished: newTestIsPublished,
           questions: selected.map(({ id, selected: _, ...rest }) => rest),
         });
 
@@ -918,6 +920,25 @@ export function AIGeneratorForm() {
                   id="new-test-show-result"
                   checked={newTestShowResult}
                   onCheckedChange={setNewTestShowResult}
+                />
+              </div>
+
+              {/* Publish immediately switch */}
+              <div className="flex items-center justify-between p-3 rounded-[6px] border border-slate-200 bg-emerald-50/50">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-semibold text-slate-900 block">
+                    Publish immediately to students
+                  </span>
+                  <span className="text-[11px] text-slate-500 block">
+                    {newTestIsPublished
+                      ? "Students can see and attempt this test right away"
+                      : "Save as draft (hidden from students until published)"}
+                  </span>
+                </div>
+                <Switch
+                  id="new-test-is-published"
+                  checked={newTestIsPublished}
+                  onCheckedChange={setNewTestIsPublished}
                 />
               </div>
             </div>

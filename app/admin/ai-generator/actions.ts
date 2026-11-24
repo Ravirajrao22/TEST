@@ -165,6 +165,7 @@ export async function createTestWithQuestionsAction(payload: {
   marksPerQuestion: number;
   negativeMarks: number;
   showResult: boolean;
+  isPublished?: boolean;
   questions: GeneratedMCQ[];
 }): Promise<{
   success: boolean;
@@ -186,6 +187,7 @@ export async function createTestWithQuestionsAction(payload: {
       marksPerQuestion,
       negativeMarks,
       showResult,
+      isPublished = true,
       questions,
     } = payload;
 
@@ -225,7 +227,7 @@ export async function createTestWithQuestionsAction(payload: {
       marks_per_question: marksPerQuestion,
       negative_marks: negativeMarks,
       show_result: showResult,
-      is_published: false, // drafted by default so admin can review
+      is_published: typeof isPublished === "boolean" ? isPublished : true,
     };
 
     let newTest: any = null;
